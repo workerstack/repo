@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { depWarnings } from "./dep-warnings.ts";
+import { registerDependent } from "./link-dependents.ts";
 import { LinkError } from "./link-error.ts";
 import { npmBefore } from "./link-installed.ts";
 import type { LinkContext, LinkTarget } from "./link-io.types.ts";
@@ -10,13 +11,14 @@ import {
   EXIT_FAIL,
   MODULES,
   NPM_NONE,
+  STAGING_DIR,
   linkedLine,
   npmHad,
   packFailed,
   siblingNoInstall,
   undoLine,
 } from "./link.constants.ts";
-import { syncPackage } from "./sync-package.ts";
+import { installPacked, packTarget, withTemp } from "./sync-package.ts";
 
 /** Links one package: packs it, swaps it in, records it, and prints what happened. */
 async function linkOne(ctx: LinkContext, target: LinkTarget): Promise<number> {
@@ -27,7 +29,9 @@ async function linkOne(ctx: LinkContext, target: LinkTarget): Promise<number> {
   let manifest;
 
   try {
-    manifest = await syncPackage(root, target);
+    manifest = await withTemp(path.join(root, STAGING_DIR), (temp) =>
+      installPacked(root, target, packTarget(target, temp)),
+    );
   } catch (error) {
     const { message } = error /* the pack and file steps throw Errors */ as Error;
     ctx.io.err(`repo ${ctx.command}: ${packFailed(target.name, message)}`);
@@ -38,6 +42,7 @@ async function linkOne(ctx: LinkContext, target: LinkTarget): Promise<number> {
   const state = readState(root);
   state[target.name] = { npm, source: target.dir, syncedAt: ctx.io.now().toISOString() };
   writeState(root, state);
+  registerDependent(target.checkout, root, { dir: target.dir, name: target.name });
   ctx.io.out(`${linkedLine(target.name, manifest.version, target.dir)}${npmHad(npm ?? NPM_NONE)}`);
 
   for (const warning of depWarnings(root, manifest)) ctx.io.out(warning);

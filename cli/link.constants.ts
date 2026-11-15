@@ -25,6 +25,8 @@ export const PACKED_DIR = "package";
 export const CMD_LINK = "link";
 export const CMD_UNLINK = "unlink";
 export const CMD_STATUS = "status";
+export const CMD_PUSH = "push";
+export const FLAG_HOOK = "--hook";
 
 /** The help lines of `repo link` and `repo unlink`. */
 export const LINK_SUMMARY =
@@ -41,7 +43,10 @@ export const TIME_DIGITS = 2;
 
 /** How to call `repo unlink`. */
 export const UNLINK_USAGE = "usage: repo unlink <name> | --all";
-export const USAGE = "usage: repo link <name> | repo link status | repo link --pre-push; repo unlink <name> | --all";
+
+export const USAGE =
+  "usage: repo link <name> | repo link status | repo link push | repo link --pre-push; repo unlink <name> | --all";
+
 export const NO_LINKS = "No links; every package comes from npm.";
 export const NOT_INSTALLED = "(not installed)";
 export const NPM_NONE = "none";
@@ -145,6 +150,9 @@ export function goneLine(name: string, source: string): string {
   return `repo link: warning: ${source} is gone; ${name} stays on npm; \`bun repo unlink ${name}\` forgets it`;
 }
 
+/** The start of every line `repo link` prints for a user. */
+export const LINK_PREFIX = "repo link:";
+
 /** The prefix of a reapply warning. */
 export const WARNING_PREFIX = "repo link: warning: ";
 
@@ -160,3 +168,49 @@ export function allowedPush(pkg: string, linked: string): string {
 
 /** The start of an alias dependency spec, `npm:<name>@<range>`. */
 export const NPM_PREFIX = "npm:";
+
+/** Under a source checkout: one file per consumer root that links one of its packages. */
+export const DEPENDENTS_DIR = ".repo/tmp/dependents";
+export const DEPENDENTS_VERSION = 1;
+export const HASH_LENGTH = 16;
+
+/** The warning for a dependents file that does not parse; the file is skipped. */
+export function badDependent(file: string, why: string): string {
+  return `repo link: warning: ${file} is not a valid dependents file (${why}); skipped`;
+}
+
+/** What `repo link push` prints when no dependents are recorded. */
+export const NO_DEPENDENTS = "No repo on this machine links this checkout.";
+
+/** Under the source checkout: where a push packs, removed after. */
+export const PUSH_TMP = ".repo/tmp/push";
+
+/** The line for a package pushed into one dependent. */
+export function pushedLine(name: string, version: string, root: string): string {
+  return `repo link: pushed ${name} ${version} to ${root}`;
+}
+
+/** The warning for a dependent that is gone or no longer links the package; its record is dropped. */
+export function droppedLine(root: string, name: string): string {
+  return `${WARNING_PREFIX}${root} is gone or no longer links ${name}; dropped it`;
+}
+
+/** The warning for a dependent whose install failed. */
+export function pushFailedLine(name: string, root: string, why: string): string {
+  return `${WARNING_PREFIX}${name} failed to install in ${root}; it keeps the last good copy: ${why}`;
+}
+
+/** The warning for a main branch that moved while the main checkout does not hold it clean. */
+export function notCleanLine(main: string): string {
+  return `${WARNING_PREFIX}main moved but ${main} does not have it checked out clean; pushed nothing`;
+}
+
+/** The header of the dependents section of `repo link status`. */
+export function dependentsHeader(count: number): string {
+  return count === 1 ? "1 dependent links this checkout:" : `${count} dependents link this checkout:`;
+}
+
+/** One dependent's row in `repo link status`. */
+export function dependentRow(root: string, name: string, synced: string): string {
+  return `  ${root}  ${name}  synced ${synced}`;
+}

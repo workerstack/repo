@@ -106,6 +106,7 @@ function textFormats(): FormatEntry[] {
     { comment: "#", format: "text", match: exact(".githooks/pre-commit") },
     { comment: "#", format: "text", match: exact(".githooks/commit-msg") },
     { comment: "#", format: "text", match: exact(".githooks/pre-push") },
+    { comment: "#", format: "text", match: exact(".githooks/reference-transaction") },
     { comment: "#", format: "text", match: exact(".github/workflows/bench.yml") },
     { comment: "#", format: "text", match: exact(".github/workflows/ci.yml") },
     { comment: "#", format: "text", match: exact(".github/workflows/eval.yml") },

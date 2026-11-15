@@ -62,7 +62,7 @@ function runHookWith(how: { bin: string; input: string; failLink?: boolean }, na
   return spawnSync("sh", ["hook", ...args], { cwd: root, encoding: "utf8", env, input: how.input });
 }
 
-it("plans pre-commit, commit-msg and pre-push as tracked, executable files sync owns, none without the pack", () => {
+it("plans the four git hooks as tracked, executable files sync owns, none without the pack", () => {
   const planned = hooks(context(["standards"])).map((output) => ({
     executable: output.kind === "file" && output.executable === true,
     managed: output.managed,
@@ -74,6 +74,7 @@ it("plans pre-commit, commit-msg and pre-push as tracked, executable files sync 
     { executable: true, managed: "whole", path: ".githooks/commit-msg", tracked: true },
     { executable: true, managed: "whole", path: ".githooks/pre-commit", tracked: true },
     { executable: true, managed: "whole", path: ".githooks/pre-push", tracked: true },
+    { executable: true, managed: "whole", path: ".githooks/reference-transaction", tracked: true },
   ]);
   expect(hooks(context(["agents", "docs"]))).toStrictEqual([]);
 });
@@ -105,6 +106,51 @@ it("pre-push stops when link refuses, before checking commits", () => {
   const r = runHookWith(how, "pre-push", "origin", "url");
   expect(r.status).toBe(1);
   expect(r.stdout).toBe("repo link --pre-push <>\n");
+});
+
+/** The planned reference-transaction hook's text. */
+function refHook(): string {
+  const hook = hooks(context(["standards"])).find((output) => output.path === ".githooks/reference-transaction");
+
+  if (hook?.kind !== "file") throw new Error("no reference-transaction hook");
+
+  return hook.content;
+}
+
+it("reference-transaction checks the phase and the main checkout's dependents dir before the bin lookup", () => {
+  const lines = refHook().split("\n");
+  const lookup = lines.findIndex((line) => line.startsWith('d="."; b=node_modules/.bin/repo'));
+  expect(lines.slice(lookup - 3, lookup)).toStrictEqual([
+    '[ "$1" = committed ] || exit 0',
+    'm="$(git rev-parse --path-format=absolute --git-common-dir 2>/dev/null)" || exit 0',
+    '[ -d "${m%/*}/.repo/tmp/dependents" ] || exit 0',
+  ]);
+  expect(lookup).toBeGreaterThan(0);
+  expect(lines.at(-2)).toBe('"$r" link push --hook');
+});
+
+/** Runs the reference-transaction hook at `root` with the phase `phase` and `input` on stdin. */
+function runRef(root: string, phase: string, input: string) {
+  fs.writeFileSync(path.join(root, "hook"), refHook());
+  const env = { PATH: repoEnv.process.PATH };
+
+  return spawnSync("sh", ["hook", phase], { cwd: root, encoding: "utf8", env, input });
+}
+
+it("reference-transaction does nothing before committed, outside git, and without a dependents dir", () => {
+  const root = tempDir();
+  fs.mkdirSync(path.join(root, "node_modules", ".bin"), { recursive: true });
+  fs.writeFileSync(path.join(root, "node_modules", ".bin", "repo"), ECHO_BIN, { mode: 0o755 });
+  spawnSync("git", ["init", "-q"], { cwd: root });
+  const lines = "a b refs/heads/main\n";
+  // No bin is needed to see the phase cut: the missing-bin exit 1 is never reached on prepared.
+  expect(runRef(root, "prepared", lines)).toMatchObject({ status: 0, stdout: "" });
+  expect(runRef(root, "committed", lines)).toMatchObject({ status: 0, stdout: "" });
+  fs.mkdirSync(path.join(root, ".repo", "tmp", "dependents"), { recursive: true });
+  expect(runRef(root, "committed", lines)).toMatchObject({ status: 0, stdout: "repo link push --hook\n" });
+  expect(runRef(root, "prepared", lines)).toMatchObject({ status: 0, stdout: "" });
+  const loose = tempDir();
+  expect(runRef(loose, "committed", lines)).toMatchObject({ status: 0, stdout: "" });
 });
 
 function at(text: string) {

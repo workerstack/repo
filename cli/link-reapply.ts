@@ -2,12 +2,13 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { findRoots } from "./find-roots.ts";
+import { checkoutOf, registerDependent } from "./link-dependents.ts";
 import { npmBefore } from "./link-installed.ts";
 import { linkIo } from "./link-io.ts";
 import type { LinkContext, LinkIo } from "./link-io.types.ts";
 import { readState, writeState, type LinkEntry, type LinkState } from "./link-state.ts";
-import { MODULES, WARNING_PREFIX, goneLine, packFailed, relinkedLine } from "./link.constants.ts";
-import { syncPackage } from "./sync-package.ts";
+import { MODULES, STAGING_DIR, WARNING_PREFIX, goneLine, packFailed, relinkedLine } from "./link.constants.ts";
+import { installPacked, packTarget, withTemp } from "./sync-package.ts";
 
 async function relinkOne(ctx: LinkContext, state: LinkState, [name, entry]: [string, LinkEntry]): Promise<void> {
   const root = ctx.roots.install;
@@ -20,16 +21,27 @@ async function relinkOne(ctx: LinkContext, state: LinkState, [name, entry]: [str
 
   const npm = npmBefore(root, name, entry.npm);
 
+  let manifest;
+
   try {
-    const manifest = await syncPackage(root, { checkout: entry.source, dir: entry.source, name });
-    state[name] = { npm, source: entry.source, syncedAt: ctx.io.now().toISOString() };
-    writeState(root, state);
-    ctx.io.out(relinkedLine(name, manifest.version, entry.source));
+    const target = { checkout: entry.source, dir: entry.source, name };
+    manifest = await withTemp(path.join(root, STAGING_DIR), (temp) =>
+      installPacked(root, target, packTarget(target, temp)),
+    );
   } catch (error) {
     ctx.io.err(
       `${WARNING_PREFIX}${packFailed(name, (error /* the pack and file steps throw Errors */ as Error).message)}`,
     );
+
+    return;
   }
+
+  state[name] = { npm, source: entry.source, syncedAt: ctx.io.now().toISOString() };
+  writeState(root, state);
+  const checkout = checkoutOf(entry.source);
+
+  if (checkout !== null) registerDependent(checkout, root, { dir: entry.source, name });
+  ctx.io.out(relinkedLine(name, manifest.version, entry.source));
 }
 
 /**

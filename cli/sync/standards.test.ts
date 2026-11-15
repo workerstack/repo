@@ -20,6 +20,7 @@ const OWN_IGNORED = [
   "/.githooks/commit-msg",
   "/.githooks/pre-commit",
   "/.githooks/pre-push",
+  "/.githooks/reference-transaction",
   "/.gitignore",
   "/.oxfmtrc.jsonc",
   "/.oxlintrc.jsonc",
@@ -132,6 +133,7 @@ it("plans both configs as sync's own, untracked files, the hooks as tracked ones
     { kind: "file", managed: "whole", path: ".githooks/commit-msg", tracked: true },
     { kind: "file", managed: "whole", path: ".githooks/pre-commit", tracked: true },
     { kind: "file", managed: "whole", path: ".githooks/pre-push", tracked: true },
+    { kind: "file", managed: "whole", path: ".githooks/reference-transaction", tracked: true },
   ]);
   expect(standards(context(["agents", "docs"]), [file("bunfig.toml", { tracked: true })])).toStrictEqual({
     errors: [],
@@ -157,7 +159,7 @@ it("writes both configs and has git ignore them, then prunes them once the pack 
   expect(fs.existsSync(path.join(root, ".oxlintrc.jsonc"))).toBe(true);
   expect(fs.existsSync(path.join(root, ".oxfmtrc.jsonc"))).toBe(true);
 
-  for (const hook of ["pre-commit", "commit-msg", "pre-push"]) {
+  for (const hook of ["pre-commit", "commit-msg", "pre-push", "reference-transaction"]) {
     expect(fs.statSync(path.join(root, ".githooks", hook)).mode & 0o777).toBe(
       process.platform === "win32" ? 0o444 : 0o555,
     ); // read-only, and no execute bits on win32

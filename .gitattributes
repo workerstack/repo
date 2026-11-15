@@ -1,4 +1,4 @@
-# repo:generated 0aa67ebf
+# repo:generated 7c68d133
 * text=auto eol=lf
 .agents/agents/implementer-deep.md linguist-generated
 .agents/agents/implementer-fast.md linguist-generated
@@ -26,6 +26,7 @@
 .githooks/commit-msg linguist-generated
 .githooks/pre-commit linguist-generated
 .githooks/pre-push linguist-generated
+.githooks/reference-transaction linguist-generated
 .github/CODEOWNERS linguist-generated
 .github/ISSUE_TEMPLATE/bug_report.yml linguist-generated
 .github/ISSUE_TEMPLATE/config.yml linguist-generated

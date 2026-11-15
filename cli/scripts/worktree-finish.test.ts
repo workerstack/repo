@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 
 import { removeTree } from "../remove-tree.ts";
 import { commitIn, git, hasBranch, plantHook, scratch, shPath, wt } from "./__fixtures__/worktree-repo.ts";
@@ -140,4 +140,51 @@ it("finishes when another session removed the worktree right after the fast-forw
   expect(git(r, "rev-parse", "main")).toBe(tip);
   expect(hasBranch(r, "wt/p")).toBe(false);
   expectOnlyMainWorktree(r);
+});
+
+/** Plants a reference-transaction hook that prints `lines` to stderr once `refs/heads/main` is committed. */
+function plantLinkHook(r: string, lines: string[]): void {
+  plantHook(r, "reference-transaction", [
+    '[ "$1" = committed ] || exit 0',
+    "grep -q ' refs/heads/main$' || exit 0",
+    ...lines.map((line) => `echo '${line}' >&2`),
+  ]);
+}
+
+/** Runs `finishWorktree` and returns what it wrote to stderr. */
+function finishStderr(r: string, name: string): string {
+  const seen: string[] = [];
+
+  const write = vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+    seen.push(String(chunk));
+
+    return true;
+  });
+
+  try {
+    finishWorktree(r, name);
+  } finally {
+    write.mockRestore();
+  }
+
+  return seen.join("");
+}
+
+it("prints the repo link lines git's hook wrote on the fast-forward, and only those", () => {
+  const r = withCommit();
+  plantLinkHook(r, ["repo link: pushed app 1.0.0 to /x", "noise from some other hook", "repo link: warning y"]);
+  expect(finishStderr(r, "a")).toBe("repo link: pushed app 1.0.0 to /x\nrepo link: warning y\n");
+});
+
+it("prints the repo link lines of a fast-forward through the ref when the root has another branch out", () => {
+  const r = withCommit();
+  git(r, "checkout", "-q", "-b", "other");
+  plantLinkHook(r, ["repo link: pushed app 1.0.0 to /x"]);
+  expect(finishStderr(r, "a")).toBe("repo link: pushed app 1.0.0 to /x\n");
+});
+
+it("prints nothing extra when the fast-forward's hook says nothing", () => {
+  const r = withCommit();
+  plantLinkHook(r, []);
+  expect(finishStderr(r, "a")).toBe("");
 });

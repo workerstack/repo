@@ -18,6 +18,7 @@ import {
   treeOf,
   versionIn,
 } from "./__fixtures__/link-world.ts";
+import { readDependents, registerDependent } from "./link-dependents.ts";
 import { reapplyAt, reapplyLinks } from "./link-reapply.ts";
 import { main, unlinkMain } from "./link.ts";
 import { removeTree } from "./remove-tree.ts";
@@ -156,4 +157,34 @@ it("links a workspace sibling's hoisted dependency again after an install put np
   installAgain(w.main, "0.3.3");
   await reapplyLinks(w.io());
   expect(resolvedFrom(w.main, "zod")).toBe(installedFile(suite, "zod"));
+});
+
+it("registers the install root in the source checkout again after a relink", async () => {
+  const w = scene();
+  put(w.flare, { ".git/HEAD": "ref: refs/heads/main\n" });
+  await main([NAME], w.io());
+  removeTree(path.join(w.flare, ".repo"));
+  installAgain(w.main, "0.3.3");
+  expect(await reapplyLinks(w.io())).toBe(0);
+  expect(readDependents(w.flare, () => {})).toStrictEqual([{ packages: [{ dir: w.flare, name: NAME }], root: w.main }]);
+});
+
+it("relinks without registering when the source has no checkout above it", async () => {
+  const w = scene();
+  await main([NAME], w.io());
+  installAgain(w.main, "0.3.3");
+  expect(await reapplyLinks(w.io())).toBe(0);
+  expect(w.err).toStrictEqual([]);
+});
+
+it("does not register when the pack fails", async () => {
+  const w = scene();
+  put(w.flare, { ".git/HEAD": "ref: refs/heads/main\n" });
+  await main([NAME], w.io());
+  registerDependent(w.flare, path.join(w.base, "elsewhere"), { dir: w.flare, name: NAME });
+  removeTree(path.join(w.flare, ".repo"));
+  sibling(w.flare, NAME, "0.5.0", { scripts: { prepack: "exit 1" } });
+  installAgain(w.main, "0.3.3");
+  await reapplyLinks(w.io());
+  expect(readDependents(w.flare, () => {})).toStrictEqual([]);
 });

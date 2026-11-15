@@ -1,9 +1,11 @@
 import fs from "node:fs";
+import path from "node:path";
 
 import { expect, it } from "vitest";
 
 import { linkedPair } from "./__fixtures__/link-two.ts";
-import { NAME, NONE, mod, npmCopy, scene, stateFile, stateOf } from "./__fixtures__/link-world.ts";
+import { NAME, NONE, mod, npmCopy, put, scene, stateFile, stateOf } from "./__fixtures__/link-world.ts";
+import { readDependents } from "./link-dependents.ts";
 import { main, unlinkMain } from "./link.ts";
 import { removeTree } from "./remove-tree.ts";
 
@@ -109,4 +111,16 @@ it("removes a marked copy even when the state entry was lost", async () => {
   expect(await unlinkMain([NAME], w.io())).toBe(0);
   expect(fs.existsSync(mod(w.main, NAME))).toBe(false);
   expect(w.installs).toStrictEqual([w.main]);
+});
+
+it("unregisters the install root from the source checkout, and leaves a source with no checkout alone", async () => {
+  const w = scene();
+  put(w.flare, { ".git/HEAD": "ref: refs/heads/main\n" });
+  await main([NAME], w.io());
+  expect(readDependents(w.flare, () => {})).toHaveLength(1);
+  await unlinkMain([NAME], w.io());
+  expect(readDependents(w.flare, () => {})).toStrictEqual([]);
+  removeTree(path.join(w.flare, ".git"));
+  await main([NAME], w.io());
+  expect(await unlinkMain(["--all"], w.io())).toBe(0);
 });

@@ -1,6 +1,7 @@
+import { checkoutOf, unregisterDependent } from "./link-dependents.ts";
 import { installedDir, markersIn, readVersion } from "./link-installed.ts";
 import type { LinkContext } from "./link-io.types.ts";
-import { readState, writeState } from "./link-state.ts";
+import { readState, writeState, type LinkState } from "./link-state.ts";
 import { EXIT_FAIL, NOT_INSTALLED, NO_LINKS, installFailed, unlinkedLine } from "./link.constants.ts";
 import { removeTree } from "./remove-tree.ts";
 
@@ -17,6 +18,15 @@ function installed(ctx: LinkContext, root: string): boolean {
   for (const line of result.output.trimEnd().split("\n").filter(Boolean)) ctx.io.err(line);
 
   return false;
+}
+
+/** Drops `name` from the state, and `root` from the dependents of the checkout its source sat in, when it has one. */
+function forget(root: string, state: LinkState, name: string): void {
+  const source = state[name]?.source;
+  const checkout = source === undefined ? null : checkoutOf(source);
+
+  if (checkout !== null) unregisterDependent(checkout, root, name);
+  delete state[name];
 }
 
 /**
@@ -40,7 +50,8 @@ export function unlinkScope(ctx: LinkContext, scope: UnlinkScope): number {
   const npm = new Map(names.map((name) => [name, state[name]?.npm ?? null]));
   const removed = names.filter((name) => marked.has(name));
 
-  for (const name of names) delete state[name];
+  for (const name of names) forget(root, state, name);
+
   writeState(root, state);
 
   for (const name of removed) removeTree(installedDir(root, name));

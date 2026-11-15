@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { CONFIG_FILE } from "../config.constants.ts";
+import { LINK_PREFIX } from "../link.constants.ts";
 import { readWorkflow } from "../workflow.ts";
 import { spawnRunner } from "./ci-wait-run.ts";
 import { canonicalPath } from "./workspace-root.ts";
@@ -41,6 +42,7 @@ import type {
   FinishDeps,
   FinishResult,
   Finishing,
+  GitRun,
   LocalFinish,
   Pruned,
   WorktreeEntry,
@@ -92,6 +94,13 @@ function finishName(root: string, raw: string | undefined, cwd: string): string 
   return name;
 }
 
+/** Prints the `repo link:` lines of git's captured output: a reference-transaction hook's lines would vanish. */
+function relayLinkLines({ err, out }: GitRun): void {
+  const lines = `${err}\n${out}`.split("\n").filter((line) => line.startsWith(LINK_PREFIX));
+
+  if (lines.length > 0) process.stderr.write(`${lines.join("\n")}\n`);
+}
+
 /** Rebase and fast-forward until the default branch holds the branch, retrying while the default branch moves. */
 function land(f: Finishing): void {
   for (let attempt = 1; ; attempt++) {
@@ -99,7 +108,11 @@ function land(f: Finishing): void {
     rebaseOnto(f.dest, f.branch, f.target);
     const forwarded = fastForward(f.root, f.branch, f.target);
 
-    if (forwarded.ok) return;
+    if (forwarded.ok) {
+      relayLinkLines(forwarded);
+
+      return;
+    }
 
     if (tipOf(f.root, f.target) === before)
       throw new Error(`could not fast-forward ${f.target} in ${f.root}: ${gitReason(forwarded.err)}`);

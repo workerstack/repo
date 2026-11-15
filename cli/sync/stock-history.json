@@ -8651,6 +8651,7 @@
   "cli/scripts/worktree-finish-pr.test.ts": ["b9c407de2f023f54"],
   "cli/scripts/worktree-finish-steps.ts": ["0a6ee1e5bfef4369", "a87ede4da37df39f"],
   "cli/scripts/worktree-finish.test.ts": [
+    "0e11a6be4efd91f1",
     "13ab4b23b5bd5d7e",
     "4fbdc5f564c6a497",
     "6d48b7193e4e4cd5",
@@ -8721,6 +8722,7 @@
     "063af34b29ba0c5b",
     "170e3a574a2f80e4",
     "1e4ce18cd225ae88",
+    "22486201310de2dc",
     "3186b0b5a2304524",
     "3bcecd7fdc78908c",
     "58af7a35a3088386",

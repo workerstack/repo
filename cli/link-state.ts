@@ -37,6 +37,15 @@ export function readState(root: string): LinkState {
   }
 }
 
+/** `name`'s entry in `root`'s link state, or null when the root has no readable state (or is gone). */
+export function entryOf(root: string, name: string): LinkEntry | null {
+  try {
+    return readState(root)[name] ?? null;
+  } catch {
+    return null;
+  }
+}
+
 /** Writes the state by rename, so a reader never sees half a file and two commands never share a temp file. */
 export function writeState(root: string, state: LinkState): void {
   const file = stateFile(root);

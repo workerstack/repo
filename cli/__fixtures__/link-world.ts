@@ -22,6 +22,7 @@ export function sibling(dir: string, name: string, version: string, extra: objec
   put(dir, {
     "package.json": JSON.stringify({ name, version, main: "index.js", dependencies: { zod: "^4" }, ...extra }),
     "index.js": `module.exports = "${version}"\n`,
+    ".npmignore": ".repo\n",
   });
   fs.mkdirSync(path.join(dir, MODULES), { recursive: true });
 }
@@ -85,7 +86,7 @@ export const NAME = "@workerstack/flare";
 export const NONE = "No links; every package comes from npm.";
 /** What a bad command line prints. */
 export const USAGE =
-  "repo link: usage: repo link <name> | repo link status | repo link --pre-push; repo unlink <name> | --all";
+  "repo link: usage: repo link <name> | repo link status | repo link push | repo link --pre-push; repo unlink <name> | --all";
 
 const worlds: World[] = [];
 afterEach(() => {

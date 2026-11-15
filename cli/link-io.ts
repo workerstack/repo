@@ -19,3 +19,8 @@ export function linkIo(): LinkIo {
     out: (line) => process.stdout.write(`${line}\n`),
   };
 }
+
+/** All of the process's standard input; read here, at the edge, and passed into the commands as text. */
+export function readStdin(): Promise<string> {
+  return Bun.stdin.text();
+}

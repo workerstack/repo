@@ -1,9 +1,20 @@
 import path from "node:path";
 
+import { readDependents } from "./link-dependents.ts";
 import { installedDir, markersIn, readVersion } from "./link-installed.ts";
 import type { LinkContext } from "./link-io.types.ts";
-import { readState } from "./link-state.ts";
-import { MODULES, NEVER, NOT_INSTALLED, NO_LINKS, NPM_NONE, NPM_UNKNOWN, TIME_DIGITS } from "./link.constants.ts";
+import { entryOf, readState } from "./link-state.ts";
+import {
+  MODULES,
+  NEVER,
+  NOT_INSTALLED,
+  NO_LINKS,
+  NPM_NONE,
+  NPM_UNKNOWN,
+  TIME_DIGITS,
+  dependentRow,
+  dependentsHeader,
+} from "./link.constants.ts";
 
 type Row = { name: string; source: string; npm: string; synced: string };
 
@@ -33,8 +44,30 @@ function rowsOf(ctx: LinkContext): Row[] {
   return [...kept, ...lost].toSorted((a, b) => a.name.localeCompare(b.name));
 }
 
-/** The lines `repo link status` prints: a count, then each link with its installed version, source and npm version. */
+/** The dependents section: each consumer root of this checkout's packages with its last sync time; none, no lines. */
+function dependentLines(ctx: LinkContext): string[] {
+  const dependents = readDependents(ctx.roots.main, ctx.io.err).toSorted((a, b) => a.root.localeCompare(b.root));
+
+  if (dependents.length === 0) return [];
+
+  const rows = dependents.flatMap(({ packages, root }) =>
+    packages.map((pkg) => {
+      const entry = entryOf(root, pkg.name);
+
+      return dependentRow(root, pkg.name, entry === null ? NEVER : clock(new Date(entry.syncedAt)));
+    }),
+  );
+
+  return [dependentsHeader(dependents.length), ...rows];
+}
+
+/** The lines `repo link status` prints: the links, then the roots that link this checkout. */
 export function linkStatus(ctx: LinkContext): string[] {
+  return [...linkLines(ctx), ...dependentLines(ctx)];
+}
+
+/** A count, then each link with its installed version, source and npm version. */
+function linkLines(ctx: LinkContext): string[] {
   const rows = rowsOf(ctx);
 
   if (rows.length === 0) return [NO_LINKS];

@@ -8,19 +8,22 @@ import { loadConfig } from "./config.ts";
 import { dependencyNames } from "./dependency-names.ts";
 import { findRoots } from "./find-roots.ts";
 import { LinkError } from "./link-error.ts";
-import { linkIo } from "./link-io.ts";
+import { linkIo, readStdin } from "./link-io.ts";
 import type { LinkContext, LinkIo } from "./link-io.types.ts";
+import { pushDependents, pushFromHook } from "./link-push.ts";
 import { resolveTargets, type LinkLookup } from "./link-siblings.ts";
 import { linkStatus } from "./link-status.ts";
 import { unlinkScope, type UnlinkScope } from "./link-unlink.ts";
 import {
   CMD_LINK,
+  CMD_PUSH,
   CMD_STATUS,
   CMD_UNLINK,
   FLAG_PRE_PUSH,
   EXIT_FAIL,
   EXIT_USAGE,
   FLAG_ALL,
+  FLAG_HOOK,
   MODULES,
   OPTION_PREFIX,
   USAGE,
@@ -83,6 +86,20 @@ function status(ctx: LinkContext): number {
   return 0;
 }
 
+/** `repo link push --hook`: reads git's lines, and never fails the git command that ran it. */
+async function hook(ctx: LinkContext, stdin: () => Promise<string>): Promise<number> {
+  await execute(ctx, async () => pushFromHook(ctx, await stdin()));
+
+  return 0;
+}
+
+/** `repo link push` or `repo link push --hook`. */
+function pushMain(ctx: LinkContext, rest: string[], stdin: () => Promise<string>): number | Promise<number> {
+  if (rest.length === 0) return execute(ctx, () => pushDependents(ctx));
+
+  return rest.length === 1 && rest[0] === FLAG_HOOK ? hook(ctx, stdin) : usage(ctx);
+}
+
 function scopeOf(arg: string): UnlinkScope | null {
   if (arg === FLAG_ALL) return { all: true };
 
@@ -93,9 +110,15 @@ function scopeOf(arg: string): UnlinkScope | null {
  * `repo link <name>` packs the sibling checkout that publishes the package `name` (or every package a sibling dir
  * `name` publishes that this repo uses) and swaps it into the install dir; `repo link status` lists the links.
  */
-export function main(argv: string[], io: LinkIo = linkIo()): number | Promise<number> {
+export function main(
+  argv: string[],
+  io: LinkIo = linkIo(),
+  stdin: () => Promise<string> = readStdin,
+): number | Promise<number> {
   const ctx: LinkContext = { command: CMD_LINK, io, roots: findRoots(io) };
   const [arg, ...rest] = argv;
+
+  if (arg === CMD_PUSH) return pushMain(ctx, rest, stdin);
 
   if (rest.length > 0) return usage(ctx);
 

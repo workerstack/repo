@@ -4,6 +4,7 @@ import path from "node:path";
 import { expect, it } from "vitest";
 
 import { NAME, mod, put, read, scene, sibling, stateOf, versionIn } from "./__fixtures__/link-world.ts";
+import { readDependents } from "./link-dependents.ts";
 import { main, unlinkMain } from "./link.ts";
 import { removeTree } from "./remove-tree.ts";
 
@@ -101,4 +102,14 @@ it("changes neither package.json nor bun.lock through link and unlink", async ()
   await main([NAME], w.io());
   await unlinkMain([NAME], w.io());
   expect([read(w.main, "package.json"), read(w.main, "bun.lock")]).toStrictEqual(before);
+});
+
+it("registers the install root in the source checkout, and a failed pack does not", async () => {
+  const w = scene();
+  sibling(w.flare, NAME, "0.5.0", { scripts: { prepack: "exit 1" } });
+  expect(await main([NAME], w.io())).toBe(1);
+  expect(readDependents(w.flare, () => {})).toStrictEqual([]);
+  sibling(w.flare, NAME, "0.4.0-dev");
+  expect(await main([NAME], w.io())).toBe(0);
+  expect(readDependents(w.flare, () => {})).toStrictEqual([{ packages: [{ dir: w.flare, name: NAME }], root: w.main }]);
 });

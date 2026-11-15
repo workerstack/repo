@@ -22,9 +22,11 @@ import { tail } from "./tail";
 /** One executable hook's `git ls-files -s` line, up to the hook's name. */
 const HOOK_LS_LINE = "100755 \\w+ 0\\t\\.githooks\\/";
 
-/** The `git ls-files -s .githooks` listing: the three hooks, each executable. */
+/** The `git ls-files -s .githooks` listing: the four hooks, each executable. */
 function hooksListing(): RegExp {
-  return new RegExp(`^${HOOK_LS_LINE}commit-msg\n${HOOK_LS_LINE}pre-commit\n${HOOK_LS_LINE}pre-push\n$`);
+  const names = ["commit-msg", "pre-commit", "pre-push", "reference-transaction"];
+
+  return new RegExp(`^${names.map((name) => `${HOOK_LS_LINE}${name}\n`).join("")}$`);
 }
 
 /** With node off PATH, fmt passes and every gate fails a planted non-null assertion and floating promise. */
