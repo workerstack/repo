@@ -1,6 +1,6 @@
 // Rule docs and the text `renderRules` plans for them, shared by the rules suites.
-import type { Host } from "../../config.ts";
-import { DEFAULT_WORKFLOW } from "../../workflow.ts";
+import { type Host, loadConfig } from "../../config.ts";
+import { DEFAULT_WORKFLOW, type Workflow } from "../../workflow.ts";
 import type { Doc, Sources } from "../agents/sources.types.ts";
 import { renderRules } from "../agents/rules.ts";
 
@@ -41,3 +41,12 @@ export function renderText(
 
 export const BASE: Doc = stockRule("overview.md", {}, "Base body.");
 export const SCOPED: Doc = rule("testing.md", { paths: ["src/**", "lib/**"] }, "Test body.");
+
+/** The workflow the repo.config.ts at `root` sets, which its committed AGENTS.md renders with. */
+export async function configuredWorkflow(root: string): Promise<Workflow> {
+  const loaded = await loadConfig(root);
+
+  if (!loaded.ok) throw new Error(`${root}: repo.config.ts does not load`);
+
+  return loaded.config.workflow;
+}

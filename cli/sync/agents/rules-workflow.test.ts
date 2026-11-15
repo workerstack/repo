@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 import { expect, it } from "vitest";
 
 import type { Workflow } from "../../workflow.ts";
-import { rule } from "../__fixtures__/rules-kit.ts";
+import { configuredWorkflow, rule } from "../__fixtures__/rules-kit.ts";
 import { regionBody } from "../region.ts";
 import { loadSources } from "./load-sources.ts";
 import { renderRules } from "./rules.ts";
@@ -40,9 +40,9 @@ it.each(["pull-request", "main"] as const)("renders the %s paragraph in place of
   expect(out).toBe(worktree.replace(stock ?? "", WORKFLOW_PARAGRAPHS[workflow]));
 });
 
-it("renders the worktree paragraph as this repo's committed AGENTS.md has it, byte for byte", () => {
+it("renders the paragraph of this repo's workflow as its committed AGENTS.md has it, byte for byte", async () => {
   const committed = fs.readFileSync(path.join(ROOT, "AGENTS.md"), "utf8");
-  const out = renderRules(STOCK, { hosts: ["claude"], scope: "", workflow: "worktree" });
+  const out = renderRules(STOCK, { hosts: ["claude"], scope: "", workflow: await configuredWorkflow(ROOT) });
   expect(out.get("AGENTS.md")?.text).toBe(`${regionBody(committed, "<!--", "rules")}\n`);
 });
 

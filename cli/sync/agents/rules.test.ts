@@ -6,7 +6,7 @@ import { expect, it } from "vitest";
 
 import { readGoldens } from "../../../dev/capture-tree-goldens.ts";
 import { HOSTS, type Host } from "../../config.ts";
-import { BASE, renderText, SCOPED, rule, sourcesOf, stockRule } from "../__fixtures__/rules-kit.ts";
+import { BASE, configuredWorkflow, renderText, SCOPED, rule, sourcesOf, stockRule } from "../__fixtures__/rules-kit.ts";
 import { regionBody } from "../region.ts";
 import { loadSources } from "./load-sources.ts";
 import { renderRules } from "./rules.ts";
@@ -46,9 +46,10 @@ it("matches the consumer fixture goldens byte for byte, path set included", () =
   for (const [rel, text] of goldens) expect(out.get(rel), rel).toBe(bodyOf(rel, text));
 });
 
-it("renders this repo's committed AGENTS.md from its stock alone, in its repo:rules region", () => {
-  const out = renderText(loadSources({ consumerRoot: null, packages: [], stockRoot: ROOT }).sources, HOSTS);
-  expect(out.get("AGENTS.md")).toBe(bodyOf("AGENTS.md", fs.readFileSync(path.join(ROOT, "AGENTS.md"), "utf8")));
+it("renders this repo's committed AGENTS.md from its stock and its workflow, in its repo:rules region", async () => {
+  const { rules } = loadSources({ consumerRoot: null, packages: [], stockRoot: ROOT }).sources;
+  const out = renderRules(rules, { hosts: HOSTS, scope: "", workflow: await configuredWorkflow(ROOT) });
+  expect(out.get("AGENTS.md")?.text).toBe(bodyOf("AGENTS.md", fs.readFileSync(path.join(ROOT, "AGENTS.md"), "utf8")));
 });
 
 it("emits nothing with no host on", () => {
