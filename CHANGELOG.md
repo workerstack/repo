@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - sync links a stack package only when it ships a references index
+- The `lint.plugins` type of `defineConfig` no longer joins the plugin names with the stock ones, so TypeScript matches two installed copies of `@workerstack/repo` and `bun repo release api` stops calling an unchanged `defineConfig` narrowed. A stock name is still a type error: `"vitest" is a stock plugin name; pick another, like "app"`.
 
 ## [0.2.0-rc.1] - 2026-11-15
 

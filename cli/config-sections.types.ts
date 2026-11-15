@@ -220,7 +220,9 @@ export type LintConfig<N extends string = string> = {
    * @default {}
    * @example plugins: { app: "lint/app.js" }
    */
-  plugins?: ({ readonly [K in N]: string } & Taken<StockPlugin>) | undefined;
+  plugins?:
+    | { readonly [K in N]: K extends StockPlugin ? `"${K}" is a stock plugin name; pick another, like "app"` : string }
+    | undefined;
   /**
    * Rules of your `plugins` to turn on at error severity, for the files each entry's globs match or for every file.
    * A key is `"<plugin>/<rule>"`; a value is `"error"` or `["error", options]`.
