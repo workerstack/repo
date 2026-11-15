@@ -54,21 +54,34 @@ function repeatedJobs(deps: GateDeps, ctx: LineCtx, pushed: Push[]): string[] {
  * Whether a later commit on `origin/<branch>` that contains the pushed commit has a passed record: ci.yml cancels a
  * run on the next push, so a newer green run is the only result such a commit gets.
  */
-function settledByLater(deps: GateDeps, ctx: LineCtx, push: Push): boolean {
+function laterCommits(deps: GateDeps, ctx: LineCtx, push: Push): string[] {
   const later = deps.git(["rev-list", "--ancestry-path", `${push.sha}..origin/${push.branch}`], ctx.root);
 
-  return (
-    later.code === 0 &&
-    later.stdout
-      .split("\n")
-      .filter((s) => s !== "")
-      .some((s) => readRecord(deps, ctx.root, s)?.outcome === "passed")
-  );
+  return later.code === 0 ? later.stdout.split("\n").filter((s) => s !== "") : [];
+}
+
+function settledByLater(deps: GateDeps, ctx: LineCtx, push: Push): boolean {
+  return laterCommits(deps, ctx, push).some((s) => readRecord(deps, ctx.root, s)?.outcome === "passed");
+}
+
+/**
+ * The newest later commit that contains the push and failed, with its failed jobs: a push with no result of its own
+ * whose branch failed after it is judged by that failure, so a job only the user can fix can be marked blocked.
+ */
+function laterFailure(deps: GateDeps, ctx: LineCtx, push: Push): { sha: string; failed: string[] } | null {
+  for (const sha of laterCommits(deps, ctx, push)) {
+    const record = readRecord(deps, ctx.root, sha);
+
+    if (record?.outcome === "failed") return { failed: record.failed, sha };
+  }
+
+  return null;
 }
 
 /**
  * The Stop line for one branch's pushes, or null when its newest landed commit is settled: by its own terminal record,
- * or by a later passed commit that contains it, which also proves a failure it had is fixed on the branch.
+ * or by a later passed commit that contains it, which also proves a failure it had is fixed on the branch. A push
+ * with no failure of its own is judged by the newest later failed commit that contains it.
  */
 export function lineFor(deps: GateDeps, ctx: LineCtx, pushed: Push[]): string | null {
   const branch = String(pushed[0]?.branch);
@@ -85,17 +98,25 @@ export function lineFor(deps: GateDeps, ctx: LineCtx, pushed: Push[]): string | 
   if (record !== null && TERMINAL.includes(record.outcome)) return null;
 
   if (settledByLater(deps, ctx, newest)) return null;
-  const short = newest.sha.slice(0, SHA_SHOWN);
   const wait = `\`bun repo ci wait ${branch}\``;
 
-  if (record?.outcome !== "failed") {
+  const failure =
+    record?.outcome === "failed" ? { failed: record.failed, sha: newest.sha } : laterFailure(deps, ctx, newest);
+
+  if (failure === null) {
     return (
-      `Stop: you pushed ${short} to ${branch} and its ci run has no result; ` +
+      `Stop: you pushed ${newest.sha.slice(0, SHA_SHOWN)} to ${branch} and its ci run has no result; ` +
       `run ${wait} in the background and fix it if it fails`
     );
   }
 
-  return failedLine(deps, ctx, { branch, failed: record.failed, pushed, short, wait });
+  return failedLine(deps, ctx, {
+    branch,
+    failed: failure.failed,
+    pushed,
+    short: failure.sha.slice(0, SHA_SHOWN),
+    wait,
+  });
 }
 
 /** The Stop line for a branch whose newest landed commit failed `failed`; null when every job is blocked. */

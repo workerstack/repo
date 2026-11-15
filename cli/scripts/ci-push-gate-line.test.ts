@@ -17,11 +17,22 @@ it.each([
   expect(r.gate()).toBeNull();
 });
 
-it("a later failed commit does not settle a superseded push", () => {
+it.each([
+  ["superseded", "superseded"],
+  ["no record", null],
+] as const)("judges a push with %s by the later failed commit that contains it", (_name, outcome) => {
   const r = pushed([["main", A]]);
-  r.result(A, "superseded");
+
+  if (outcome !== null) r.result(A, outcome);
   r.result(B, "failed", TEST);
-  expect(r.gate()).toBe(noResult(A));
+  expect(r.gate()).toBe(failedLine(B, TEST.join(", ")));
+});
+
+it("passes a push with no record whose later failed commit failed only on blocked jobs", () => {
+  const r = pushed([["main", A]]);
+  r.result(B, "failed", TEST);
+  r.backlog(`- [ ] blocked: \`${TEST[0]}\` needs a release only the owner can cut\n`);
+  expect(r.gate()).toBeNull();
 });
 
 it("an older passed commit does not settle a superseded push", () => {
