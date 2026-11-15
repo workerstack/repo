@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0-rc.1] - 2026-11-15
+
 ### Added
 
 - `bun repo sync` writes a generated `.repo/.gitkeep` in every repo, whatever packs it uses, so `.repo/` is always committed even when nothing else in it is tracked. `bun repo sync --check` fails when it is missing, and the `.repo` layout check allows it.
