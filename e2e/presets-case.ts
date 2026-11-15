@@ -28,7 +28,7 @@ async function expectResetTypes(sb: Sandbox) {
   // Pure-marked, so repo(no-module-side-effects) passes and only the type error is left.
   sb.write("src/main.ts", 'export const main: number = /* @__PURE__ */ JSON.parse("1")\n');
   const tsc = await sb.run("bun", [path.join(sb.repo, "node_modules", "typescript", "bin", "tsc"), "-p", "."]);
-  expect(tsc.status, tail(tsc.out)).toBe(2);
+  expect(tsc.status, tail(tsc.out)).toBe(1);
   expect(tsc.stdout).toContain("src/main.ts(1,14): error TS2322: Type 'unknown' is not assignable to type 'number'.");
   expect(tsc.stdout).not.toContain("TS2688");
 }

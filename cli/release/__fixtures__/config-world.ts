@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import ts from "typescript";
+import ts from "typescript-5.9";
 import { INSTALLED_DIR, TSCONFIG } from "../consumer.constants.ts";
 import { apiWorld } from "./api-world.ts";
 import type { Version, World } from "./api-world.ts";
