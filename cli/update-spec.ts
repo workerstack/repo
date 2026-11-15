@@ -1,4 +1,4 @@
-import { MAJOR_SEPARATOR, PLAIN, PREFIX, PROTOCOL, TAG, WILDCARD } from "./update.constants.ts";
+import { PLAIN, PREFIX, PROTOCOL, TAG, WILDCARD } from "./update.constants.ts";
 
 /**
  * How `repo update` reads a spec: a plain version it checks, a range it lists, or a protocol or tag it leaves
@@ -24,7 +24,7 @@ export function isBehind(version: string, latest: string): boolean {
   return Bun.semver.order(version, latest) < 0;
 }
 
-/** True when `latest` is a higher major than `version`. */
+/** True when `latest` is outside `^version`, so a 0.x minor and a 0.0.x patch count as major. */
 export function isMajor(version: string, latest: string): boolean {
-  return Number(latest.split(MAJOR_SEPARATOR)[0]) > Number(version.split(MAJOR_SEPARATOR)[0]);
+  return !Bun.semver.satisfies(latest, `^${version}`);
 }

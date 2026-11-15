@@ -1,4 +1,5 @@
 export const FLAG_CHECK: string = "--check";
+export const FLAG_MAJOR: string = "--major";
 export const OPTION_PREFIX: string = "-";
 export const EXIT_FAIL: number = 1;
 export const EXIT_USAGE: number = 2;
@@ -18,7 +19,6 @@ export const CATALOG: string = "catalog";
 export const CATALOGS: string = "catalogs";
 export const WORKSPACES: string = "workspaces";
 export const PEER_FIELD: string = "peerDependencies";
-export const MAJOR_SEPARATOR: string = ".";
 export const PLAIN: RegExp = /^[\^~]?(\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?)$/;
 
 /** A protocol (`catalog:`, `workspace:`, `git+ssh://`) or a `user/repo` shorthand. */
@@ -27,10 +27,19 @@ export const PROTOCOL: RegExp = /[:/]/;
 export const TAG: RegExp = /^[A-Za-z][\w.-]*$/;
 export const WILDCARD: RegExp = /^[xX]$/;
 
-export const USAGE: string = "usage: repo update [--check] [<name>|@scope/*…]";
+export const USAGE: string = "usage: repo update [--check] [--major] [<name>|@scope/*…]";
 export const NOT_ON_REGISTRY: string = "is not on the registry";
 export const NO_LATEST: string = "has no latest on the registry";
 export const FOLLOW_UP: string = "run `bun repo update` to write them, or `bun repo update <name>` for some";
+
+/** The `--check` follow-up when a row is major, since a bare run holds those. */
+export const MAJOR_FOLLOW_UP: string =
+  "run `bun repo update` for minor and patch, `bun repo update --major` for all, " +
+  "or `bun repo update <name>` for some";
+
+/** What a bare run prints after the majors it held. */
+export const HELD_FOLLOW_UP: string =
+  "run `bun repo update --major` to take them, or `bun repo update <name>` for some";
 
 export function prefixed(message: string): string {
   return `repo update: ${message}`;
@@ -75,6 +84,10 @@ export function onLatest(name: string, spec: string): string {
   return `${name} is on latest (${spec})`;
 }
 
+export function heldHeader(count: number): string {
+  return `held ${count} major: `;
+}
+
 export function updatedHeader(count: number): string {
   return `updated ${count}: `;
 }
@@ -90,7 +103,8 @@ export function catalogWhere(scope: string | null): string {
 export const JSON_INDENT: number = 2;
 
 export const UPDATE_SUMMARY: string =
-  "List and bump outdated catalog and manifest versions (--check: list only; names or @scope/* narrow it)";
+  "List and bump outdated catalog and manifest versions " +
+  "(--check: list only; --major: take majors; names or @scope/* narrow it)";
 
 /** The lines of an install's output that `repo sync --postinstall` printed. */
 export const SYNC_PREFIX: string = "repo sync: ";

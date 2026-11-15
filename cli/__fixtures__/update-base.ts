@@ -32,8 +32,18 @@ export const CHECK_BEHIND = [
   "  typescript  package.json         5.8.3 → 5.9.3",
   "  vitest      packages/api         ^5.0.1 → ^5.1.0",
   'skipped 2: react in packages/web is ">=18 <20", not a plain version; @acme/kit is not on the registry',
-  "run `bun repo update` to write them, or `bun repo update <name>` for some",
+  "run `bun repo update` for minor and patch, `bun repo update --major` for all, " +
+    "or `bun repo update <name>` for some",
 ];
+
+export const HELD: string[] = [
+  "held 1 major: zod ^3.24.1 → ^4.1.12 in the catalog",
+  "run `bun repo update --major` to take them, or `bun repo update <name>` for some",
+];
+
+/** What a bare run writes: every bump but the held zod major. */
+export const UPDATED_MINOR =
+  "updated 2: typescript 5.8.3 → 5.9.3 in package.json, vitest ^5.0.1 → ^5.1.0 in packages/api";
 
 export const UPDATED =
   "updated 3: zod ^3.24.1 → ^4.1.12 in the catalog, typescript 5.8.3 → 5.9.3 in package.json, vitest ^5.0.1 → ^5.1.0 in packages/api";

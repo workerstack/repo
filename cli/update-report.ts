@@ -4,11 +4,14 @@ import {
   ARROW,
   COLUMN_GAP,
   FOLLOW_UP,
+  HELD_FOLLOW_UP,
   INDENT,
+  MAJOR_FOLLOW_UP,
   MAJOR_MARK,
   WHERE_MIN,
   allCurrent,
   behindHeader,
+  heldHeader,
   skippedLine,
   updatedHeader,
 } from "./update.constants.ts";
@@ -26,18 +29,29 @@ export function checkLines({ checked, behind, skipped }: Assessed): string[] {
   const nameWidth = Math.max(...behind.map((source) => source.name.length)) + COLUMN_GAP;
   const whereWidth = Math.max(WHERE_MIN, ...behind.map((source) => source.where.length + COLUMN_GAP));
 
-  const rows = behind.map((source) => {
-    const major = isMajor(source.version, source.latest) ? `${INDENT}${MAJOR_MARK}` : "";
+  const majors = behind.map((source) => isMajor(source.version, source.latest));
+
+  const rows = behind.map((source, index) => {
+    const major = majors[index] === true ? `${INDENT}${MAJOR_MARK}` : "";
 
     return `${INDENT}${source.name.padEnd(nameWidth)}${source.where.padEnd(whereWidth)}${change(source)}${major}`;
   });
 
-  return [behindHeader(behind.length, checked.length), ...rows, ...skips, FOLLOW_UP];
+  const followUp = majors.includes(true) ? MAJOR_FOLLOW_UP : FOLLOW_UP;
+
+  return [behindHeader(behind.length, checked.length), ...rows, ...skips, followUp];
+}
+
+function listed(sources: readonly Checked[]): string {
+  return sources.map((source) => `${source.name} ${change(source)} in ${source.said}`).join(", ");
 }
 
 /** The one line `update` prints after it writes: each change with where it was made. */
 export function updatedLine(behind: readonly Checked[]): string {
-  const parts = behind.map((source) => `${source.name} ${change(source)} in ${source.said}`);
+  return `${updatedHeader(behind.length)}${listed(behind)}`;
+}
 
-  return `${updatedHeader(behind.length)}${parts.join(", ")}`;
+/** The lines a bare run prints for the majors it held: each one, then how to take them. */
+export function heldLines(held: readonly Checked[]): string[] {
+  return [`${heldHeader(held.length)}${listed(held)}`, HELD_FOLLOW_UP];
 }

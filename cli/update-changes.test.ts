@@ -55,7 +55,7 @@ it("prints the sections above the installed version up to the new one, newest fi
   };
 
   const w = world(files, { [REPO]: "0.2.0" }, disk);
-  expect(await main([], w.io())).toBe(0);
+  expect(await main(["--major"], w.io())).toBe(0);
   expect(w.out).toStrictEqual([
     "updated 1: @workerstack/repo ^0.1.0 → ^0.2.0 in package.json",
     "@workerstack/repo 0.1.3 → 0.2.0:",
@@ -73,7 +73,7 @@ it("starts from the lowest spec version when nothing is installed", async () => 
 
   const disk = { writes: { [at("", REPO, "CHANGELOG.md")]: LOG } };
   const w = world(files, { [REPO]: "0.2.0" }, disk);
-  expect(await main([], w.io())).toBe(0);
+  expect(await main(["--major"], w.io())).toBe(0);
   expect(w.out.slice(1)).toStrictEqual([
     "@workerstack/repo 0.1.0 → 0.2.0:",
     "  ## [0.2.0] - 2026-11-20",
@@ -96,7 +96,7 @@ it("starts from the spec version when the installed package.json names no semver
   };
 
   const w = world(files, { [REPO]: "0.2.0" }, disk);
-  expect(await main([], w.io())).toBe(0);
+  expect(await main(["--major"], w.io())).toBe(0);
   expect(w.out.slice(1, 2)).toStrictEqual(["@workerstack/repo 0.1.2 → 0.2.0:"]);
 });
 
@@ -115,7 +115,7 @@ it("reads the installed version and the changelog from the member that holds the
   };
 
   const w = world(files, { [REPO]: "0.2.0" }, disk);
-  expect(await main([], w.io())).toBe(0);
+  expect(await main(["--major"], w.io())).toBe(0);
   expect(w.out.slice(1)).toStrictEqual([
     "@workerstack/repo 0.1.2 → 0.2.0:",
     "  ## [0.2.0] - 2026-11-20",
@@ -131,7 +131,7 @@ it("prints no block for a package outside @workerstack", async () => {
   const files = { "package.json": { dependencies: { "@other/repo": "1.0.0", zod: "1.0.0" }, name: "r" } };
   const disk = { writes: { [at("", "@other/repo", "CHANGELOG.md")]: LOG } };
   const w = world(files, { "@other/repo": "2.0.0", zod: "2.0.0" }, disk);
-  expect(await main([], w.io())).toBe(0);
+  expect(await main(["--major"], w.io())).toBe(0);
   expect(w.out).toHaveLength(1);
 });
 
@@ -143,7 +143,7 @@ it("says in one line that a package ships no CHANGELOG.md", async () => {
 
   const disk = { installed: { [at("packages/a", REFS, "package.json")]: manifest(REFS, "0.1.1") } };
   const w = world(files, { [REFS]: "0.1.2" }, disk);
-  expect(await main([], w.io())).toBe(0);
+  expect(await main(["--major"], w.io())).toBe(0);
   expect(w.out.slice(1)).toStrictEqual([
     `@workerstack/references 0.1.1 → 0.1.2: no CHANGELOG.md in ${at("packages/a", REFS, "").replace(/\/$/, "")}`,
   ]);
@@ -152,13 +152,24 @@ it("says in one line that a package ships no CHANGELOG.md", async () => {
 it("says so when the changelog has nothing between the versions", async () => {
   const files = { "package.json": { dependencies: { [REPO]: "0.1.3" }, name: "r" } };
   const w = world(files, { [REPO]: "0.1.4" }, { writes: { [at("", REPO, "CHANGELOG.md")]: LOG } });
-  expect(await main([], w.io())).toBe(0);
+  expect(await main(["--major"], w.io())).toBe(0);
   expect(w.out.slice(1)).toStrictEqual(["@workerstack/repo 0.1.3 → 0.1.4: no CHANGELOG.md sections between them"]);
 });
 
 it("prints no block when the install fails", async () => {
   const files = { "package.json": { dependencies: { [REPO]: "^0.1.0" }, name: "r" } };
   const w = world(files, { [REPO]: "0.2.0" }, { writes: { [at("", REPO, "CHANGELOG.md")]: LOG } });
-  expect(await main([], w.io({ install: () => ({ code: 1, output: "boom\n" }) }))).toBe(1);
+  expect(await main(["--major"], w.io({ install: () => ({ code: 1, output: "boom\n" }) }))).toBe(1);
   expect(w.out).toStrictEqual(["updated 1: @workerstack/repo ^0.1.0 → ^0.2.0 in package.json"]);
+});
+
+it("prints no block for a major a bare run held", async () => {
+  const files = { "package.json": { dependencies: { [REPO]: "^0.1.0", zod: "4.0.0" }, name: "r" } };
+  const w = world(files, { [REPO]: "0.2.0", zod: "4.1.0" }, { writes: { [at("", REPO, "CHANGELOG.md")]: LOG } });
+  expect(await main([], w.io())).toBe(0);
+  expect(w.out).toStrictEqual([
+    "updated 1: zod 4.0.0 → 4.1.0 in package.json",
+    "held 1 major: @workerstack/repo ^0.1.0 → ^0.2.0 in package.json",
+    "run `bun repo update --major` to take them, or `bun repo update <name>` for some",
+  ]);
 });

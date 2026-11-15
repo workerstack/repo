@@ -25,7 +25,7 @@ it("finds default and named catalog entries, top-level and under workspaces, and
     "  c  catalog:old          1.0.0 → 1.0.1",
     "  b  catalog:next         ^1.0.0 → ^2.0.0  major",
   ]);
-  await main([], w.io());
+  await main(["--major"], w.io());
   expect(w.out.at(-1)).toBe(
     "updated 3: a ~1.0.0 → ~1.2.0 in the catalog, c 1.0.0 → 1.0.1 in the old catalog, " +
       "b ^1.0.0 → ^2.0.0 in the next catalog",
@@ -154,7 +154,7 @@ it("runs on the process streams when no io is given", async () => {
     spy.mockRestore();
   }
 
-  expect(written).toStrictEqual(["repo update: usage: repo update [--check] [<name>|@scope/*…]\n"]);
+  expect(written).toStrictEqual(["repo update: usage: repo update [--check] [--major] [<name>|@scope/*…]\n"]);
 });
 
 function scoped() {

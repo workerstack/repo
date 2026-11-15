@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- A bare `bun repo update` holds major bumps, counting a 0.x minor or 0.0.x patch bump as major since `^` does not reach it. It writes the rest and ends with `held N major: …` and how to take them: `bun repo update --major` for all, or `bun repo update <name>` for some. A named package or `@scope/*` still takes its majors, so `bun repo update '@workerstack/*'` is unchanged. `--check` marks those bumps `major` and names `--major` in its last line.
 - **Breaking:** `link` in repo.config.ts is now `{ paths, push }`, and the package-to-checkout map moves under `link.paths`: `link: { "@acme/ui": "../ui" }` becomes `link: { paths: { "@acme/ui": "../ui" } }`. The old map fails to load with `link: unknown key "@acme/ui"`.
 - **Breaking:** reject files are checked with TypeScript 7, so a `rejects:` mark must quote the error text tsc 7 prints
 - **Breaking:** `bun repo check` fails a repo whose installed typescript is below 7, naming `bun add -d typescript@7.0.2` (`bun add typescript@7.0.2` when the root lists it under `dependencies`)

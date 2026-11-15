@@ -171,8 +171,8 @@ name the branch)
 ([--stable | --pre <id>]); wait <name>@<version>: poll npm
   remove            Remove a dependency from every manifest, the catalog and the root's overrides
   unlink            Put a linked dependency back on npm (--all: every link)
-  update            List and bump outdated catalog and manifest versions (--check: list only; names or @scope/* \
-narrow it)
+  update            List and bump outdated catalog and manifest versions (--check: list only; --major: take majors; \
+names or @scope/* narrow it)
   hook <name>       Run a hook: gate-fat-tools, orchestrate-parent, rtk-grok, scrub-spawn-prompt, session-map, \
 worktree
   help              Show this help
