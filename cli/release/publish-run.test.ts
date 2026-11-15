@@ -1,12 +1,15 @@
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { removePlanted } from "../__fixtures__/planted-repo.ts";
 import { publish, type Registry } from "../__fixtures__/publish-world.ts";
 import { gitIn, NAME, world } from "../__fixtures__/release-world.ts";
 
 afterEach(removePlanted);
+
+/** Each test runs git in temp repos, which takes seconds per test on a slow CI runner. */
+vi.setConfig({ testTimeout: 60_000 });
 
 const SPEC = `${NAME}@0.1.0`;
 

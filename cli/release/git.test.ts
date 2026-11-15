@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 
 import { removePlanted } from "../__fixtures__/planted-repo.ts";
 import { commit, gitIn, world } from "../__fixtures__/release-world.ts";
@@ -8,6 +8,9 @@ import { spawnRunner } from "../scripts/ci-wait-run.ts";
 import { commitWithSubject, commitsAfter, type Tools } from "./git.ts";
 
 afterEach(removePlanted);
+
+/** Each test runs git in temp repos, which takes seconds per test on a slow CI runner. */
+vi.setConfig({ testTimeout: 60_000 });
 
 const OLD = "2000-01-01T00:00:00Z";
 const FUTURE = "2099-01-01T00:00:00Z";

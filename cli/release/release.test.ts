@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { removePlanted } from "../__fixtures__/planted-repo.ts";
 import { NAME, commit, fakeGh, feat, gitIn, release, snapshot, world } from "../__fixtures__/release-world.ts";
@@ -9,6 +9,9 @@ import type { World } from "../__fixtures__/release-world.ts";
 import { ciLine } from "./release.ts";
 
 afterEach(removePlanted);
+
+/** Each test runs git in temp repos, which takes seconds per test on a slow CI runner. */
+vi.setConfig({ testTimeout: 60_000 });
 
 const TAG = `${NAME}@0.1.1`;
 const SUBJECT = `chore: release ${TAG}`;

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { removePlanted, tempDir, write } from "../__fixtures__/planted-repo.ts";
 import {
@@ -14,6 +14,9 @@ import {
 } from "../__fixtures__/release-world.ts";
 
 afterEach(removePlanted);
+
+/** Each test runs git in temp repos, which takes seconds per test on a slow CI runner. */
+vi.setConfig({ testTimeout: 60_000 });
 
 const USAGE =
   "usage: repo release [--stable | --pre <id>] | wait | gate | pack | publish | github <name>@<version> " +

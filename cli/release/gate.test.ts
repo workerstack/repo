@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ghFor, runGate, tagRelease } from "../__fixtures__/gate-world.ts";
 import { removePlanted } from "../__fixtures__/planted-repo.ts";
@@ -6,6 +6,9 @@ import { commit, gitIn, NAME, world } from "../__fixtures__/release-world.ts";
 import { DISPATCH_GRACE_MS, MS_PER_SECOND } from "../scripts/ci-wait.constants.ts";
 
 afterEach(removePlanted);
+
+/** Each test runs git in temp repos, which takes seconds per test on a slow CI runner. */
+vi.setConfig({ testTimeout: 60_000 });
 
 const GRACE = `${DISPATCH_GRACE_MS / MS_PER_SECOND}s`;
 const LIST = "databaseId,status,conclusion,event,headBranch,createdAt";

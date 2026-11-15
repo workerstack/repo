@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 
 import { removePlanted } from "../__fixtures__/planted-repo.ts";
 import { NAME, commit, gitIn, release, type World } from "../__fixtures__/release-world.ts";
@@ -18,6 +18,9 @@ import {
 } from "./__fixtures__/release-pr.ts";
 
 afterEach(removePlanted);
+
+/** Each test runs git in temp repos, which takes seconds per test on a slow CI runner. */
+vi.setConfig({ testTimeout: 60_000 });
 
 const AGAIN = "run bun repo release again once it merges";
 const DONE = `${NAME} 0.1.1 · already committed · CI passed · tagged ${TAG}\n`;
