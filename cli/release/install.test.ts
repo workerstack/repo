@@ -43,10 +43,25 @@ describe("installOld", () => {
     expect(installOld(tempDir(), { tarball: "/abs/old.tgz" }, { bun })).toBeNull();
     expect(calls).toStrictEqual([["add", "old@/abs/old.tgz"]]);
   });
+});
 
+describe("installOld failures", () => {
   it("returns the first line of bun's error", () => {
     const { bun } = recording(1, "\nerror: 404 not found\nmore\n");
     expect(installOld(tempDir(), { tarball: "/x.tgz" }, { bun })).toBe("error: 404 not found");
+  });
+
+  it("returns bun's first error line, past its progress lines", () => {
+    const stderr = [
+      "Resolving dependencies",
+      "Resolved, downloaded and extracted [3]",
+      'error: No version matching "npm:@acme/fx@9.9.9" found for specifier "@acme/fx" (but package exists)',
+      "error: old@npm:@acme/fx@9.9.9 failed to resolve",
+    ].join("\n");
+
+    expect(installOld(tempDir(), { tarball: "/x.tgz" }, recording(1, stderr))).toBe(
+      'error: No version matching "npm:@acme/fx@9.9.9" found for specifier "@acme/fx" (but package exists)',
+    );
   });
 
   it("returns an empty line when bun says nothing", () => {

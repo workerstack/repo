@@ -17,6 +17,9 @@ export function BUN_ADD(...specs: string[]): string[] {
   return ["add", ...specs];
 }
 
+/** How bun starts the lines that say why an add failed. */
+export const BUN_ERROR: string = "error:";
+
 export const INSTALLED_DIR: string = "node_modules";
 export const PROBE_FILE: string = "probe.mjs";
 export const PROBE_INPUT: string = "probe-input.json";

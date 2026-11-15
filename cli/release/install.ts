@@ -9,6 +9,7 @@ import type { Runner } from "../scripts/ci-wait.ts";
 import {
   BUN_ADD,
   BUN_ADD_FROM,
+  BUN_ERROR,
   INSTALLED_DIR,
   NPM_ALIAS,
   OLD_ALIAS,
@@ -43,8 +44,11 @@ function projectSchema() {
   return z.object({ dependencies: z.record(z.string(), z.string()) });
 }
 
-function firstLine(text: string): string {
-  return text.trim().split("\n", 1).join("");
+/** bun's first `error:` line, past the progress lines it prints first; else its first line. */
+function errorLine(text: string): string {
+  const lines = text.trim().split("\n");
+
+  return lines.find((line) => line.startsWith(BUN_ERROR)) ?? lines.slice(0, 1).join("");
 }
 
 /** Writes the manifest of an empty project into `project`. */
@@ -78,7 +82,7 @@ export function addPeers(project: string, pkg: Package, io: InstallIo): string |
   return peers.length === 0 ? null : addSpecs(project, peers, io);
 }
 
-/** Adds the old version to `project` as `old`; the first line of bun's error when it fails, else null. */
+/** Adds the old version to `project` as `old`; bun's error line when it fails, else null. */
 export function installOld(project: string, spec: OldSpec, io: InstallIo): string | null {
   const args =
     "tarball" in spec
@@ -87,7 +91,7 @@ export function installOld(project: string, spec: OldSpec, io: InstallIo): strin
 
   const added = io.bun(args, project);
 
-  return added.code === 0 ? null : firstLine(added.stderr);
+  return added.code === 0 ? null : errorLine(added.stderr);
 }
 
 /** The specifier a package installed as `name` is imported by at one of its subpaths. */
