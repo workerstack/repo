@@ -113,6 +113,22 @@ it("lists several dependents under a plural header, after the links", async () =
   ]);
 });
 
+it("pads the root and package columns of the dependents to the widest value", async () => {
+  const w = scene();
+  const short = dependent(w, "ui", new Date(2026, 10, 12, 9, 0).toISOString());
+  const long = dependent(w, "frontend", new Date(2026, 10, 12, 10, 30).toISOString());
+  registerDependent(w.main, short, { dir: w.flare, name: "@workerstack/solo" });
+  await main(["status"], w.io());
+  const rootWidth = long.length;
+  const pkgWidth = Math.max(NAME.length, "@workerstack/solo".length);
+  expect(w.out.slice(1)).toStrictEqual([
+    "2 dependents link this checkout:",
+    `  ${long.padEnd(rootWidth)}  ${NAME.padEnd(pkgWidth)}  synced 10:30`,
+    `  ${short.padEnd(rootWidth)}  ${NAME.padEnd(pkgWidth)}  synced 09:00`,
+    `  ${short.padEnd(rootWidth)}  ${"@workerstack/solo".padEnd(pkgWidth)}  synced never`,
+  ]);
+});
+
 it("still lists a dependent after its state write was lost, or its root is gone", async () => {
   const w = scene();
   const lost = dependent(w, "lost", null);
@@ -135,7 +151,7 @@ it("lists a package of a dependent whose state links a different one as never sy
   await main(["status"], w.io());
   expect(w.out.slice(2)).toStrictEqual([
     `  ${root}  ${NAME}  synced 20:05`,
-    `  ${root}  @workerstack/solo  synced never`,
+    `  ${root}  ${"@workerstack/solo".padEnd(NAME.length)}  synced never`,
   ]);
 });
 

@@ -50,13 +50,19 @@ function dependentLines(ctx: LinkContext): string[] {
 
   if (dependents.length === 0) return [];
 
-  const rows = dependents.flatMap(({ packages, root }) =>
-    packages.map((pkg) => {
-      const entry = entryOf(root, pkg.name);
+  const pairs = dependents.flatMap(({ packages, root }) => packages.map((pkg) => ({ name: pkg.name, root })));
 
-      return dependentRow(root, pkg.name, entry === null ? NEVER : clock(new Date(entry.syncedAt)));
-    }),
-  );
+  const widths = {
+    name: Math.max(...pairs.map((pair) => pair.name.length)),
+    root: Math.max(...pairs.map((pair) => pair.root.length)),
+  };
+
+  const rows = pairs.map(({ name, root }) => {
+    const entry = entryOf(root, name);
+    const synced = entry === null ? NEVER : clock(new Date(entry.syncedAt));
+
+    return dependentRow({ name, root, synced }, widths);
+  });
 
   return [dependentsHeader(dependents.length), ...rows];
 }

@@ -31,6 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `repo sync` writes the owned `bunfig.toml` in each workspace package dir too, with the same refusal of a hand-written one per path. Bun reads it only from its cwd, and the commit gate runs tests with cwd set to the package, where auto-install was on and could resolve a missing package from Bun's global cache.
 - `@workerstack/repo/env` now ships as built JavaScript with its types, as `./vitest` does, so plain Node can load an `infra.config.ts` that imports `defineEnv` from `node_modules`. Before, Node refused it with "Stripping types is currently unsupported for files under node_modules". `bun install` builds it through `prepare`.
 - The ci push gate judges a pushed commit with no ci result of its own by the newest later failed commit that contains it, so a job marked blocked in the backlog releases it instead of asking for a wait that can never end
+- bun repo link status lines up the root and package columns of its dependents rows
 
 ## [0.2.0-rc.2] - 2026-11-15
 

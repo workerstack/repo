@@ -211,6 +211,9 @@ export function dependentsHeader(count: number): string {
 }
 
 /** One dependent's row in `repo link status`. */
-export function dependentRow(root: string, name: string, synced: string): string {
-  return `  ${root}  ${name}  synced ${synced}`;
+export function dependentRow(
+  row: { root: string; name: string; synced: string },
+  widths: { root: number; name: number },
+): string {
+  return `  ${row.root.padEnd(widths.root)}  ${row.name.padEnd(widths.name)}  synced ${row.synced}`;
 }
