@@ -1,12 +1,13 @@
 // Shared setup for the `checkTsconfigs` suites: temp git repos, installs of this package, configs and messages.
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import ts from "typescript-5.9";
 import { expect } from "vitest";
+
+import { tscBin } from "../scripts/package-bin.ts";
 
 import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
 
@@ -85,21 +86,31 @@ export function srcConfig(dir: string, owner: string, compilerOptions: object = 
 
 export type Diagnostic = { code: number; file: string | undefined; text: string };
 
-/** Every diagnostic `tsc -p <configFile>` would print, with `file` posix and relative to the config's folder. */
+/** A `file(line,col): error TSn: text` line or a fileless `error TSn: text` line, each the start of one diagnostic. */
+const DIAGNOSTIC_LINE = /^(?:(?<file>.+)\(\d+,\d+\): )?error TS(?<code>\d+): (?<text>.*)$/;
+
+/** Every diagnostic `tsc -p <configFile>` prints, with `file` posix and relative to the config's folder. */
 export function diagnostics(configFile: string): Diagnostic[] {
   const dir = path.dirname(configFile);
-  const read = ts.readConfigFile(configFile, ts.sys.readFile);
-  expect(read.error).toBeUndefined();
-  const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, dir, undefined, configFile);
-  const program = ts.createProgram({
-    options: parsed.options,
-    rootNames: parsed.fileNames,
-  });
-  return [...parsed.errors, ...ts.getPreEmitDiagnostics(program)].map((d) => ({
-    code: d.code,
-    file: d.file && path.relative(dir, d.file.fileName).split(path.sep).join("/"),
-    text: ts.flattenDiagnosticMessageText(d.messageText, "\n"),
-  }));
+  const args = [tscBin(), "-p", configFile, "--pretty", "false"];
+  const run = spawnSync(process.execPath, args, { cwd: dir, encoding: "utf8" });
+  const found: Diagnostic[] = [];
+
+  for (const line of run.stdout.split("\n").filter((text) => text !== "")) {
+    const groups = DIAGNOSTIC_LINE.exec(line)?.groups;
+    const last = found.at(-1);
+
+    if (groups === undefined) {
+      expect(last, `a line before any diagnostic: ${line}`).toBeDefined();
+      if (last !== undefined) last.text += `\n${line}`;
+      continue;
+    }
+
+    const file = groups.file && path.relative(dir, path.resolve(dir, groups.file)).split(path.sep).join("/");
+    found.push({ code: Number(groups.code), file, text: groups.text ?? "" });
+  }
+
+  return found;
 }
 
 export const UNKNOWN_TO_NUMBER: Diagnostic = {

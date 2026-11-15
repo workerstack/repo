@@ -37,7 +37,12 @@ async function checkSources(cwd: string, print: Printer): Promise<void> {
   const { checkFixtures } = await import("./check-fixtures.ts");
   const { checkEnvValues } = await import("./check-env-values.ts");
   const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-  print.fail([...checkTsconfigs(cwd, pkgRoot), ...checkEnvModules(cwd), ...checkFixtures(cwd), ...checkEnvValues(cwd)]);
+  print.fail([
+    ...(await checkTsconfigs(cwd, pkgRoot)),
+    ...checkEnvModules(cwd),
+    ...checkFixtures(cwd),
+    ...checkEnvValues(cwd),
+  ]);
 }
 
 /** Manifests and disable comments, under the standards pack. */

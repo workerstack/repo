@@ -5,18 +5,18 @@
 import fs from "node:fs";
 
 import { parse } from "jsonc-parser";
-import ts from "typescript-5.9";
 import { z } from "zod";
 
 import { dependencyNames } from "./dependency-names.ts";
 import { isRecord, type JsonObject } from "./json.ts";
+import { nearestFile } from "./lint/manifest.ts";
 import { byCodeUnit } from "./sync/by-code-unit.ts";
 import type { PackageJson } from "./sync/workspace.ts";
 import { installedManifest } from "./type-surface.constants.ts";
 
 /** A JSON or JSONC file's top-level fields; none for a file that is missing, unreadable or holds no object. */
-export function fieldsOf(file: string | undefined): JsonObject {
-  if (file === undefined) return {};
+export function fieldsOf(file: string | null | undefined): JsonObject {
+  if (file === undefined || file === null) return {};
   let text: unknown;
 
   try {
@@ -35,8 +35,7 @@ function parentsOf(dir: string, deps: readonly string[]): Map<string, string[]> 
   const parents = new Map<string, string[]>();
 
   for (const dep of deps) {
-    const manifest = ts.findConfigFile(dir, (file) => ts.sys.fileExists(file), installedManifest(dep));
-    const { dependencies } = fieldsOf(manifest);
+    const { dependencies } = fieldsOf(nearestFile(dir, installedManifest(dep)));
 
     for (const child of Object.keys(isRecord(dependencies) ? dependencies : {}))
       parents.set(child, [...(parents.get(child) ?? []), dep]);

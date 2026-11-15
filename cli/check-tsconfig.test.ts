@@ -38,11 +38,11 @@ function typeErrors(config: string) {
 }
 
 describe("checkTsconfigs", () => {
-  it.each(["base", "bun", "worker", "web"])("passes a package that extends the %s base", (base) => {
+  it.each(["base", "bun", "worker", "web"])("passes a package that extends the %s base", async (base) => {
     const dir = consumerRepo();
     apiOn(dir, base);
     srcConfig(dir, "packages/api");
-    expect(checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
+    expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
   });
 });
 
@@ -62,7 +62,7 @@ describe("checkTsconfigs", () => {
 describe("checkTsconfigs", () => {
   it(
     "the worker base types the workers runtime and keeps ts-reset",
-    () => {
+    async () => {
       const { dir, installed } = hoistedRepo();
       write(dir, "node_modules/@cloudflare/workers-types/package.json", {
         name: "@cloudflare/workers-types",
@@ -71,7 +71,7 @@ describe("checkTsconfigs", () => {
       write(dir, "node_modules/@cloudflare/workers-types/index.d.ts", "declare const WORKERS_STUB: string\n");
       const config = apiOn(dir, "worker", "const w: string = WORKERS_STUB\n");
       srcConfig(dir, "packages/api");
-      expect(checkTsconfigs(dir, installed)).toStrictEqual([]);
+      expect(await checkTsconfigs(dir, installed)).toStrictEqual([]);
       expect(typeErrors(config)).toStrictEqual([UNKNOWN_TO_NUMBER]);
     },
     PROGRAM_TIMEOUT,
@@ -79,7 +79,7 @@ describe("checkTsconfigs", () => {
 });
 
 describe("checkTsconfigs", () => {
-  it("passes a tsconfig that extends a local one that extends the base", () => {
+  it("passes a tsconfig that extends a local one that extends the base", async () => {
     const dir = consumerRepo();
     write(dir, "tsconfig.base.json", {
       extends: "@workerstack/repo/tsconfig/base",
@@ -91,10 +91,10 @@ describe("checkTsconfigs", () => {
     });
     srcConfig(dir, "packages/a");
     write(dir, "packages/a/src/a.ts", "const a = 1\n");
-    expect(checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
+    expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
   });
 
-  it("passes a solution-style root that checks no code", () => {
+  it("passes a solution-style root that checks no code", async () => {
     const dir = consumerRepo();
     write(dir, "tsconfig.json", { files: [], references: [{ path: "./a" }] });
     write(dir, "a/tsconfig.json", {
@@ -103,12 +103,12 @@ describe("checkTsconfigs", () => {
     });
     srcConfig(dir, "a");
     write(dir, "a/src/a.ts", "const a = 1\n");
-    expect(checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
+    expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
   });
 });
 
 describe("checkTsconfigs", () => {
-  it("matches the package root through a symlinked install path", () => {
+  it("matches the package root through a symlinked install path", async () => {
     const dir = consumerRepo();
     write(dir, "tsconfig.json", {
       extends: "@workerstack/repo/tsconfig/bun",
@@ -116,6 +116,6 @@ describe("checkTsconfigs", () => {
     });
     srcConfig(dir, ".");
     write(dir, "src/a.ts", "const a = 1\n");
-    expect(checkTsconfigs(dir, path.join(dir, "node_modules", "@workerstack", "repo"))).toStrictEqual([]);
+    expect(await checkTsconfigs(dir, path.join(dir, "node_modules", "@workerstack", "repo"))).toStrictEqual([]);
   });
 });

@@ -2,11 +2,13 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import ts from "typescript-5.9";
+import { parse, type ParseError } from "jsonc-parser";
+import type { API } from "typescript/unstable/async";
 import { z } from "zod";
 
 import { isRecord, isString } from "./json.ts";
 import { canonicalPath } from "./scripts/workspace-root.ts";
+import { configOf, type TsConfig, withTsApi } from "./ts-api.ts";
 import { RESET, RUNTIME_CONFIG, SRC_CONFIG } from "./tsconfig.constants.ts";
 
 const TSCONFIG_NAME = /^tsconfig(\..+)?\.json$/;
@@ -61,58 +63,19 @@ export function missingSrcConfig(dir: string): string {
   );
 }
 
-/** A tsconfig parsed, with what its own text sets, or the line naming why it cannot be read. */
-type Read =
-  | {
-      ok: true;
-      hasFiles: boolean;
-      solution: boolean;
-      parsed: ts.ParsedCommandLine;
-    }
-  | { ok: false; line: string };
-
-/** The text of `file`, or undefined when it cannot be read. */
-function readText(file: string): string | undefined {
-  return ts.sys.readFile(file);
-}
-
 /** typescript keys its source files by forward-slash paths and asserts that spelling on win32. */
 function tsPath(cwd: string, rel: string): string {
   return path.join(cwd, rel).split(path.sep).join("/");
 }
 
-function readTsconfig(cwd: string, rel: string): Read {
-  const file = tsPath(cwd, rel);
-  const read = ts.readConfigFile(file, readText);
+/** What the reset check reads of a config: whether its own text sets `files`, and the root files it resolves to. */
+type ResetRead = Readonly<{ hasOwnFiles: boolean; fileNames: readonly string[] }>;
 
-  if (read.error !== undefined) {
-    return {
-      line: `tsconfig: ${rel}: ${ts.flattenDiagnosticMessageText(read.error.messageText, " ")}`,
-      ok: false,
-    };
-  }
-
-  const config: unknown = read.config;
-
-  const raw = config /* without a read error, typescript has parsed the root as a JSON object */ as {
-    files?: unknown;
-    references?: unknown;
-  };
-
-  // Read before parsing, which writes the inherited "files" into the raw object.
-  const hasFiles = raw.files !== undefined;
-  const solution = Array.isArray(raw.files) && raw.files.length === 0 && raw.references !== undefined;
-  const parsed = ts.parseJsonConfigFileContent(read.config, ts.sys, path.dirname(file), undefined, file);
-
-  return { hasFiles, ok: true, parsed, solution };
-}
-
-function resetProblem(rel: string, read: Read & { ok: true }, reset: string): string | undefined {
-  if (read.hasFiles)
+function resetProblem(rel: string, { hasOwnFiles, fileNames }: ResetRead, reset: string): string | undefined {
+  if (hasOwnFiles)
     return `tsconfig: ${rel} sets "files", which replaces the base's reset.d.ts. List sources under "include".`;
 
-  const names = read.parsed.fileNames;
-  const keepsReset = names.some((name) => path.basename(name) === RESET && canonicalPath(name) === reset);
+  const keepsReset = fileNames.some((name) => path.basename(name) === RESET && canonicalPath(name) === reset);
 
   if (keepsReset) return undefined;
 
@@ -120,7 +83,7 @@ function resetProblem(rel: string, read: Read & { ok: true }, reset: string): st
 }
 
 /** A `tsconfig.src.json` that resolves with any strict flag off. */
-function weakProblem(rel: string, options: ts.CompilerOptions): string | undefined {
+function weakProblem(rel: string, options: TsConfig["options"]): string | undefined {
   const off = STRICT_FLAGS.filter((flag) => options[flag] !== true);
 
   if (off.length === 0) return undefined;
@@ -144,38 +107,54 @@ function rejectProblems(cwd: string, rel: string, fileNames: readonly string[]):
 }
 
 /** What a check of the tsconfigs under `cwd` reads: every listed one, and the canonical path of the base reset.d.ts. */
-type Scan = { cwd: string; listed: ReadonlySet<string>; reset: string };
+type Scan = { api: API; cwd: string; listed: ReadonlySet<string>; reset: string };
 
-function problems({ cwd, listed, reset }: Scan, rel: string): string[] {
-  const read = readTsconfig(cwd, rel);
+async function problems({ api, cwd, listed, reset }: Scan, rel: string): Promise<string[]> {
+  const raw = readRaw(cwd, rel);
 
-  if (!read.ok) return [read.line];
+  // A solution config checks no code, so TypeScript never needs to read it.
+  if (Array.isArray(raw.files) && raw.files.length === 0 && raw.references !== undefined) return [];
+  const read = await configOf(api, tsPath(cwd, rel));
 
-  if (read.solution) return [];
+  if (!read.ok) return [`tsconfig: ${rel}: ${read.error}`];
   const name = path.posix.basename(rel);
   const dir = path.posix.dirname(rel);
-  const lines = [resetProblem(rel, read, reset)];
+  const hasOwnFiles = raw.files !== undefined;
+  const lines = [resetProblem(rel, { fileNames: read.value.fileNames, hasOwnFiles }, reset)];
 
-  if (name === SRC_CONFIG) lines.push(weakProblem(rel, read.parsed.options));
+  if (name === SRC_CONFIG) lines.push(weakProblem(rel, read.value.options));
 
   if (name === RUNTIME_CONFIG && !listed.has(path.posix.join(dir, SRC_CONFIG))) lines.push(missingSrcConfig(dir));
 
-  return [...lines.filter((line) => line !== undefined), ...rejectProblems(cwd, rel, read.parsed.fileNames)];
+  return [...lines.filter((line) => line !== undefined), ...rejectProblems(cwd, rel, read.value.fileNames)];
 }
 
-/** The keys of a package.json or tsconfig this check reads; typescript parses a JSON file's root as an object. */
 /** The fields a config or package.json is read for, each any JSON or absent; another top-level shape reads as `{}`. */
 function rawConfigSchema() {
   return z
-    .object({ extends: z.json().optional(), references: z.json().optional(), scripts: z.json().optional() })
+    .object({
+      extends: z.json().optional(),
+      files: z.json().optional(),
+      references: z.json().optional(),
+      scripts: z.json().optional(),
+    })
     .catch({});
 }
 
-/** The raw JSON object at `cwd`/`rel`, empty when it is missing or unreadable. */
+/** The raw JSON object at `cwd`/`rel`, empty when it is missing, unreadable or not valid JSON with comments. */
 function readRaw(cwd: string, rel: string): z.output<ReturnType<typeof rawConfigSchema>> {
-  const read = ts.readConfigFile(tsPath(cwd, rel), readText);
+  let text: string;
 
-  return read.error === undefined ? rawConfigSchema().parse(read.config) : {};
+  try {
+    text = fs.readFileSync(path.join(cwd, rel), "utf8");
+  } catch {
+    return {};
+  }
+
+  const errors: ParseError[] = [];
+  const config: unknown = parse(text, errors, { allowTrailingComma: true });
+
+  return errors.length === 0 ? rawConfigSchema().parse(config) : {};
 }
 
 /** The config a `-p` value or a reference `path` names from `dir`: the file, or a folder's `tsconfig.json`. */
@@ -251,11 +230,17 @@ function unrunProblem(rel: string, run: ReadonlySet<string>): string[] {
  * too: run means named `tsconfig.json` or `tsconfig.src.json`, named by `-p` or `--project` in a script of a
  * package.json above it, or extended or referenced, transitively, by a run config.
  */
-export function checkTsconfigs(cwd: string, pkgRoot: string): string[] {
+export function checkTsconfigs(cwd: string, pkgRoot: string): Promise<string[]> {
   const reset = canonicalPath(path.join(pkgRoot, "tsconfig", RESET));
   const rels = listTsconfigs(cwd);
-  const scan: Scan = { cwd, listed: new Set(rels), reset };
   const run = runConfigs(cwd, rels);
 
-  return rels.flatMap((rel) => [...problems(scan, rel), ...unrunProblem(rel, run)]);
+  return withTsApi(cwd, async (api) => {
+    const scan: Scan = { api, cwd, listed: new Set(rels), reset };
+    const lines: string[] = [];
+
+    for (const rel of rels) lines.push(...(await problems(scan, rel)), ...unrunProblem(rel, run));
+
+    return lines;
+  });
 }

@@ -16,17 +16,17 @@ import { tempDir } from "./sync/__fixtures__/temp-dirs.ts";
 useTsconfigKit();
 
 describe("checkTsconfigs", () => {
-  it.each(STRICT_FLAGS)("refuses a tsconfig.src.json that turns %s off", (flag) => {
+  it.each(STRICT_FLAGS)("refuses a tsconfig.src.json that turns %s off", async (flag) => {
     const dir = consumerRepo();
     write(dir, "packages/api/tsconfig.json", {
       extends: "@workerstack/repo/tsconfig/bun",
       include: ["src"],
     });
     srcConfig(dir, "packages/api", { [flag]: false });
-    expect(checkTsconfigs(dir, pkgRoot)).toStrictEqual([WEAK("packages/api/tsconfig.src.json", flag)]);
+    expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([WEAK("packages/api/tsconfig.src.json", flag)]);
   });
 
-  it("names every flag a tsconfig.src.json without the strict base resolves without", () => {
+  it("names every flag a tsconfig.src.json without the strict base resolves without", async () => {
     const dir = consumerRepo();
     write(dir, "tsconfig.json", {
       extends: "@workerstack/repo/tsconfig/bun",
@@ -37,12 +37,12 @@ describe("checkTsconfigs", () => {
       extends: "./tsconfig.json",
     });
     const missing = STRICT_FLAGS.filter((flag) => flag !== "noUncheckedIndexedAccess").join(", ");
-    expect(checkTsconfigs(dir, pkgRoot)).toStrictEqual([WEAK("tsconfig.src.json", missing)]);
+    expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([WEAK("tsconfig.src.json", missing)]);
   });
 });
 
 describe("checkTsconfigs", () => {
-  it("passes a tsconfig.json with its strict tsconfig.src.json", () => {
+  it("passes a tsconfig.json with its strict tsconfig.src.json", async () => {
     const dir = consumerRepo();
     write(dir, "tsconfig.json", {
       extends: "@workerstack/repo/tsconfig/bun",
@@ -50,12 +50,12 @@ describe("checkTsconfigs", () => {
     });
     srcConfig(dir, ".");
     write(dir, "src/a.ts", "export const f = () => 1\n");
-    expect(checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
+    expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
   });
 });
 
 describe("checkTsconfigs", () => {
-  it("refuses a tsconfig.json and tsconfig.src.json that include a reject file, until both exclude it", () => {
+  it("refuses a tsconfig.json and tsconfig.src.json that include a reject file, until both exclude it", async () => {
     const dir = consumerRepo();
     write(dir, "tsconfig.json", {
       extends: "@workerstack/repo/tsconfig/bun",
@@ -65,7 +65,7 @@ describe("checkTsconfigs", () => {
     write(dir, "src/user.ts", "export const a = 1\n");
     write(dir, "src/user.reject.ts", "export const b: number = 'x'\n");
     write(dir, "src/view.reject.tsx", "export const c: number = 'x'\n");
-    expect(checkTsconfigs(dir, pkgRoot)).toStrictEqual([
+    expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([
       INCLUDES("tsconfig.json", "src/user.reject.ts"),
       INCLUDES("tsconfig.json", "src/view.reject.tsx"),
       INCLUDES("tsconfig.src.json", "src/user.reject.ts"),
@@ -81,18 +81,18 @@ describe("checkTsconfigs", () => {
       exclude: [...exclude, "**/*.test.ts"],
       extends: ["./tsconfig.json", "@workerstack/repo/tsconfig/strict"],
     });
-    expect(checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
+    expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
   });
 });
 
 describe("checkTsconfigs", () => {
-  it("returns nothing outside a git repo", () => {
+  it("returns nothing outside a git repo", async () => {
     const dir = tempDir("check-tsconfig-nogit-");
     write(dir, "tsconfig.json", { include: ["src"] });
-    expect(checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
+    expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
   });
 
-  it("passes this repo's own tsconfigs", () => {
-    expect(checkTsconfigs(pkgRoot, pkgRoot)).toStrictEqual([]);
+  it("passes this repo's own tsconfigs", async () => {
+    expect(await checkTsconfigs(pkgRoot, pkgRoot)).toStrictEqual([]);
   });
 });

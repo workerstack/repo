@@ -37,16 +37,21 @@ function isGlobToken(token: string): token is keyof typeof GLOB_PARTS {
   return Object.hasOwn(GLOB_PARTS, token);
 }
 
-/** The nearest package.json at or above `start`, or null when none is. */
-export function nearestManifest(start: string): string | null {
+/** The nearest `rel`, a file name or a relative path, at or above `start`, or null when none is. */
+export function nearestFile(start: string, rel: string): string | null {
   let dir = start;
 
-  while (!fs.existsSync(path.join(dir, "package.json"))) {
+  while (!fs.existsSync(path.join(dir, rel))) {
     if (path.dirname(dir) === dir) return null;
     dir = path.dirname(dir);
   }
 
-  return path.join(dir, "package.json");
+  return path.join(dir, rel);
+}
+
+/** The nearest package.json at or above `start`, or null when none is. */
+export function nearestManifest(start: string): string | null {
+  return nearestFile(start, "package.json");
 }
 
 /** A manifest's bin scripts: `bin` as one path or a map of them; anything else names none. */
