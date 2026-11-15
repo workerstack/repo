@@ -39,9 +39,9 @@ it("precommit writes and stages the table with the staged, formatted stock file"
   expect(readStockHistory(path.join(root, TABLE))[HOOKS]).toStrictEqual([hashText(formatted)]);
   expect(fs.readFileSync(STOCK_HISTORY_FILE, "utf8")).toBe(own);
 
-  // The table joined after fmt and lint passed, so only they run again.
+  // fmt and lint ran again on the table that joined, so the next gate runs no step.
   const again = await precommit(root);
-  expect(again.out).toBe("precommit: 2 files · fmt ok · lint ok · 4 cached\n");
+  expect(again.out).toBe("precommit: 2 files · 6 cached\n");
   expect(again.code).toBe(0);
   expect(git(root, "diff", "--name-only")).toBe("");
 });

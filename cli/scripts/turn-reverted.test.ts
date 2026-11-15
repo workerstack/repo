@@ -69,17 +69,22 @@ const ELSE =
   "export function a(n: number) {\n  if (n > 0) {\n    const next = n + 1;\n\n    return next;\n" +
   "  } else {\n    return 0;\n  }\n}\n";
 
-it("an else lint --fix turns back into the committed text leaves no changes", { timeout: SLOW }, async () => {
-  const root = typed({ "src/a.ts": FIXED });
-  const { bins, calls } = recording(root);
-  write(root, { "src/a.ts": ELSE });
-  expect(await turn(root, [], bins)).toStrictEqual({
-    code: 0,
-    err: "",
-    out: "turn: 1 file · fmt ok · lint ok · no changes left\n",
-  });
-  expect(calls).toStrictEqual([]);
-});
+it(
+  "an else lint --fix turns back into the committed text leaves no changes and drops typecheck",
+  { timeout: SLOW },
+  async () => {
+    const root = typed({ "src/a.ts": FIXED });
+    const { bins, calls } = recording(root);
+    write(root, { "src/a.ts": ELSE });
+    expect(await turn(root, [], bins)).toStrictEqual({
+      code: 0,
+      err: "",
+      out: "turn: 1 file · fmt ok · lint ok · no changes left\n",
+    });
+    // Typecheck started beside lint; the gate waited for it and printed nothing of it.
+    expect(calls).toStrictEqual([tscCall("tsconfig.json"), tscCall("tsconfig.src.json")]);
+  },
+);
 
 it("a new untracked file fmt fixes stays in the change set", { timeout: SLOW }, async () => {
   const root = typed({});

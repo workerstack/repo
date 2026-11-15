@@ -2468,6 +2468,7 @@
   "cli/scripts/__fixtures__/file-tree.ts": ["e3897f76f599cd04"],
   "cli/scripts/__fixtures__/folder-map-kit.ts": ["c3da511c89019d68", "d9c16a15af947dd6"],
   "cli/scripts/__fixtures__/gate-answers.ts": ["5149e0dcc9012b28"],
+  "cli/scripts/__fixtures__/gate-kit.ts": ["46400aedc9775497", "63893c5b9274f09c"],
   "cli/scripts/__fixtures__/gate-workspace.ts": ["f3f39ad0fef39b06", "fe6b45a1b4405eac"],
   "cli/scripts/__fixtures__/git-command-kit.ts": ["c2cc58de32087b5b"],
   "cli/scripts/__fixtures__/google-workspace-kit.ts": [
@@ -4516,6 +4517,10 @@
     "f3e7ee3341634cca",
     "f7afef622d2c1a47"
   ],
+  "cli/scripts/gate-run-joined.test.ts": ["5fee7423c9ca70a2", "6b1669ea9d124c84"],
+  "cli/scripts/gate-run-keys.test.ts": ["31566c66e86c79fb", "f65b8a806828888d"],
+  "cli/scripts/gate-run.test.ts": ["7fbb600f15afd3de", "aabbb84b7cf16115"],
+  "cli/scripts/gate-run.ts": ["d137d6cb08b63c96", "db80ebfae4ad4ec4"],
   "cli/scripts/gate-shell-guards.test.ts": ["853648a6d3a33477"],
   "cli/scripts/gate-shell.test.ts": [
     "1c6d99de3467ee71",
@@ -7294,7 +7299,7 @@
     "eb9862d9d36b826f"
   ],
   "cli/scripts/precommit.test.ts": ["6463d99309edd348", "9528cac7cd14b5b2", "d633c1524e997804"],
-  "cli/scripts/precommit.ts": ["8f7d6fd6161f57be"],
+  "cli/scripts/precommit.ts": ["2da2c9b3650953eb", "8f7d6fd6161f57be"],
   "cli/scripts/prepare-item-update.ts": ["5071cd4908e7bd24"],
   "cli/scripts/prompt.ts": [
     "03b7005dc0c38639",
@@ -8046,7 +8051,12 @@
   "cli/scripts/stock-history-collect.constants.ts": ["c6dbf4569ab0e723"],
   "cli/scripts/stock-history-collect.test.ts": ["024508ff88661750", "8435a5cc3bec0bbe"],
   "cli/scripts/stock-history-collect.ts": ["dfa30aa05cf89526", "e16d34c8dce85cf1"],
-  "cli/scripts/stock-history-step.test.ts": ["6ea68c4ce979a37d", "70f7276f0de697aa", "c34df25e6d0f1f16"],
+  "cli/scripts/stock-history-step.test.ts": [
+    "6ea68c4ce979a37d",
+    "70f7276f0de697aa",
+    "84fdb8cd2ae90a8f",
+    "c34df25e6d0f1f16"
+  ],
   "cli/scripts/stock-history-step.ts": ["07a344b7740c0375", "5dc0caf8db7c966c", "91ed01dd067f81db", "dcf803bc4ef639a2"],
   "cli/scripts/strategy-stamp.test.ts": [
     "0cdc3b188a4e17dd",
@@ -8281,7 +8291,7 @@
     "ef0912258ae33a70",
     "ff9a7a12e0084b3c"
   ],
-  "cli/scripts/turn-cache-gate.test.ts": ["577df0ace535000c", "9917939d1ec919ec"],
+  "cli/scripts/turn-cache-gate.test.ts": ["577df0ace535000c", "61436764cd558993", "9917939d1ec919ec"],
   "cli/scripts/turn-cache.test.ts": ["4c690abadeec153d", "ef4f01a897e14f26"],
   "cli/scripts/turn-edges.test.ts": [
     "118e2e6c40512b34",
@@ -8320,7 +8330,13 @@
     "bcd6d19b003a5b6e",
     "ca23417ead3b41df"
   ],
-  "cli/scripts/turn-reverted.test.ts": ["0bea80142d57c1e2", "4df7f5ff2661bef9", "c3828222a972774b", "faeee95c01e0557c"],
+  "cli/scripts/turn-reverted.test.ts": [
+    "0bea80142d57c1e2",
+    "4df7f5ff2661bef9",
+    "c3828222a972774b",
+    "db3b33b566be5b4e",
+    "faeee95c01e0557c"
+  ],
   "cli/scripts/turn-scope.test.ts": ["0c57cd0b0fd9ae4c", "44ad64cd311d360a", "7c82258cfb205adc", "c94ebcabfbacb223"],
   "cli/scripts/turn-steps.constants.ts": ["26506fd289749b61", "3f03e0d363455523"],
   "cli/scripts/turn-steps.test.ts": [
@@ -8406,7 +8422,8 @@
     "c00ab86ea2dee47b",
     "e1a08ae9074cfd28",
     "ea10ad0dfba620fd",
-    "ec9eb89952f047ca"
+    "ec9eb89952f047ca",
+    "f685c016d5564b0a"
   ],
   "cli/scripts/typecheck-gate.test.ts": [
     "2d5b95197b4e591e",

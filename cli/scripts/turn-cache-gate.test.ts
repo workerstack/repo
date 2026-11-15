@@ -6,9 +6,10 @@ import { afterEach, expect, it } from "vitest";
 import { edited } from "./__fixtures__/turn-cache-kit.ts";
 import { cleanTemps, git, SLOW, write } from "./__fixtures__/turn-repo.ts";
 import { DAY } from "./clean.constants.ts";
+import type { Gate } from "./gate-run.ts";
 import { PASS_AGE } from "./pass-cache.constants.ts";
 import { passed, type StepResult, type Turn } from "./turn-steps.ts";
-import { gateMain, type Gate } from "./turn.ts";
+import { gateMain } from "./turn.ts";
 
 afterEach(cleanTemps);
 
@@ -35,30 +36,30 @@ function lastStep(turned: Turn): Promise<StepResult> {
 }
 
 const REWRITING: Gate = {
+  after: [lastStep],
+  beside: [],
+  fixes: [firstStep],
   name: "turn",
   parse: () => ({ ok: true, scope: { kind: "tree" } }),
-  steps: [firstStep, rewriteStep, lastStep],
+  writes: [rewriteStep],
 };
 
 it(
-  "a rewrite reruns only the earlier steps next gate, and the files it wrote join the set",
+  "the files a rewrite wrote join the set and get the fixes, so the next gate runs no step",
   { timeout: SLOW },
   async () => {
     const root = edited();
     const out: string[] = [];
     const deps = { cwd: root, stderr: () => {}, stdout: (s: string) => out.push(s) };
     expect(await gateMain(REWRITING, [], deps)).toBe(0);
-    expect(runs.splice(0)).toStrictEqual(["first", "rewrite", "last src/a.ts src/made.ts"]);
+    expect(runs.splice(0)).toStrictEqual(["first", "rewrite", "first", "last src/a.ts src/made.ts"]);
     expect(await gateMain(REWRITING, [], deps)).toBe(0);
-    expect(runs.splice(0)).toStrictEqual(["first"]);
-    expect(out).toStrictEqual([
-      "turn: 1 file · first ok · rewrite ok · last ok\n",
-      "turn: 2 files · first ok · 2 cached\n",
-    ]);
+    expect(runs.splice(0)).toStrictEqual([]);
+    expect(out).toStrictEqual(["turn: 1 file · first ok · rewrite ok · last ok\n", "turn: 2 files · 3 cached\n"]);
   },
 );
 
-const ONE: Gate = { ...REWRITING, steps: [firstStep] };
+const ONE: Gate = { ...REWRITING, after: [], writes: [] };
 
 /** The steps two runs of `ONE` ran in `root`, each run's list apart. */
 async function twice(root: string): Promise<string[][]> {

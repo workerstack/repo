@@ -95,8 +95,8 @@ export default defineConfig({
           "cli/docs.ts",
           "cli/run-check.ts",
           "cli/scripts/ci.ts",
+          "cli/scripts/gate-run.ts",
           "cli/scripts/tests-step.ts",
-          "cli/scripts/turn.ts",
           "cli/scripts/typecheck-gate.ts",
         ],
         reason:
