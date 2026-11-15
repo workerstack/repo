@@ -1,3 +1,6 @@
+/** The build that emits `dist`, as bun arguments run in the root. */
+export const BUILD_ARGS: readonly string[] = ["run", "build"];
+
 /** The sync that follows linking, as bun arguments run in the root. */
 export const SYNC_ARGS: readonly string[] = ["bin/repo.ts", "sync", "--postinstall"];
 

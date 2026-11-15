@@ -13,7 +13,7 @@ import { removeTree } from "../cli/remove-tree.ts";
 import { toolEnv } from "../cli/scripts/tool-env.ts";
 import { byCodeUnit } from "../cli/sync/by-code-unit.ts";
 import * as K from "./link-self.constants.ts";
-import { SYNC_ARGS, WINDOWS } from "./sync-args.constants.ts";
+import { BUILD_ARGS, SYNC_ARGS, WINDOWS } from "./sync-args.constants.ts";
 
 type Result = "linked" | "current";
 
@@ -183,18 +183,33 @@ export function linkSelf(root: string, platform: string = process.platform): Lin
   };
 }
 
-/** Runs `repo sync --postinstall` in `cwd` with the terminal inherited; returns its exit code. */
-function runSync(cwd: string): number {
-  const result = spawnSync(process.execPath, SYNC_ARGS, { cwd, env: toolEnv(childEnv()), stdio: "inherit" });
+/** Runs bun with `args` in `cwd` with the terminal inherited; returns its exit code. */
+function runBun(args: readonly string[], cwd: string): number {
+  const result = spawnSync(process.execPath, args, { cwd, env: toolEnv(childEnv()), stdio: "inherit" });
 
   return result.status ?? 1;
 }
 
-/** Link the bin and the package, then sync; returns the sync's exit code. */
-export function linkAndSync(root: string, sync: (cwd: string) => number = runSync): number {
-  linkSelf(root);
+/** Runs `repo sync --postinstall` in `cwd`; returns its exit code. */
+function runSync(cwd: string): number {
+  return runBun(SYNC_ARGS, cwd);
+}
 
-  return sync(root);
+/** Runs the build in `cwd`, so the package's own `dist` exports resolve; returns its exit code. */
+function runBuild(cwd: string): number {
+  return runBun(BUILD_ARGS, cwd);
+}
+
+/** Link the bin and the package, build, then sync; returns the first non-zero exit code, else the sync's. */
+export function linkAndSync(
+  root: string,
+  sync: (cwd: string) => number = runSync,
+  build: (cwd: string) => number = runBuild,
+): number {
+  linkSelf(root);
+  const built = build(root);
+
+  return built === 0 ? sync(root) : built;
 }
 
 if (import.meta.main) process.exitCode = linkAndSync(process.cwd());

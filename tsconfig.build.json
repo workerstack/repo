@@ -8,5 +8,5 @@
     "rootDir": "."
   },
   "extends": "./tsconfig/base.json",
-  "include": ["presets/vitest.ts", "presets/temp-root.ts"]
+  "include": ["cli/env/index.ts", "presets/vitest.ts", "presets/temp-root.ts"]
 }

@@ -70,8 +70,8 @@
       "default": "./cli/bench/spec.ts"
     },
     "./env": {
-      "types": "./cli/env/index.ts",
-      "default": "./cli/env/index.ts"
+      "types": "./dist/cli/env/index.d.ts",
+      "default": "./dist/cli/env/index.js"
     },
     "./lint": "./cli/lint/index.ts",
     "./tailwind": "./cli/lint/tailwind-plugin.ts",

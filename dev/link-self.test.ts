@@ -102,9 +102,15 @@ describe("linkAndSync", () => {
       return 1;
     }
 
-    expect(linkAndSync(dir, run)).toBe(1);
+    expect(linkAndSync(dir, run, () => 0)).toBe(1);
     expect(calls).toStrictEqual([dir, "bin\n"]);
-    expect(linkAndSync(dir, () => 0)).toBe(0);
+    expect(
+      linkAndSync(
+        dir,
+        () => 0,
+        () => 0,
+      ),
+    ).toBe(0);
   });
 });
 
