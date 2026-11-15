@@ -182,3 +182,19 @@ it("removeTree waits for real by default between tries", () => {
   removeTree(dir, rm);
   expect(Date.now() - started).toBeGreaterThanOrEqual(90);
 });
+
+it.skipIf(process.platform === "win32")("removeTree unlocks a locked tree before it waits on a busy error", () => {
+  const dir = tree();
+  const locked = path.join(dir, "a/b");
+  fs.chmodSync(locked, 0o500);
+  const waits: number[] = [];
+
+  // macOS rm reports a dir it may not empty as ENOTEMPTY, the code Windows gives a busy file.
+  const rm = ((p: fs.PathLike, options?: fs.RmOptions) => {
+    if ((fs.statSync(locked).mode & 0o700) !== 0o700) throw fsError("ENOTEMPTY", String(p));
+    fs.rmSync(p, options);
+  }) /* the stand-in takes the path and options removeTree passes */ as typeof fs.rmSync;
+
+  removeTree(dir, rm, (ms) => waits.push(ms));
+  expect({ gone: !fs.existsSync(dir), waits }).toStrictEqual({ gone: true, waits: [] });
+});
