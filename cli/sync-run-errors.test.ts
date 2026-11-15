@@ -81,7 +81,9 @@ it("reports a failed write, removes its temp file and exits 1", async () => {
     stdout: "",
   });
   expect(rename).toHaveBeenCalledOnce();
-  expect(fs.readdirSync(root).toSorted()).toStrictEqual([CONFIG_FILE, "package.json", "packages"].toSorted());
+  expect(fs.readdirSync(root).toSorted()).toStrictEqual(
+    [CONFIG_FILE, "node_modules", "package.json", "packages"].toSorted(),
+  );
 });
 
 it("--postinstall prints an error and exits 0", async () => {

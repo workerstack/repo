@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `bun repo mutate` runs the mutants of the files `vitest.node.config.ts` covers (its `test.coverage.include`) in a second Stryker run on node with that config, beside the bun run for the rest, so the rule files score against the tests that cover them; the nightly mutate job sets up node from `engines.node`, else `devEngines.runtime`. Node not on PATH, a node config that will not load and one with no `test.coverage.include` each stop the run with one line.
 - The line a node run prints when node is not on PATH names the command that ran it: `repo coverage:` and `red-proof:` in place of `repo ci:`.
 
+### Fixed
+
+- sync links a stack package only when it ships a references index
+
 ## [0.2.0-rc.1] - 2026-11-15
 
 ### Added

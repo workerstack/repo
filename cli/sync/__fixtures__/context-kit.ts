@@ -46,6 +46,10 @@ export const PACKAGE_INDEXES = {
   "apps/web/references/INDEX.md": "Web app\r\n",
   "packages/api/references/INDEX.md": "\n\n# API worker\n\nMore.\n",
 };
+/** The installed references index of each stack package in `names`, as `files` entries. */
+export function installedIndexes(...names: string[]): Record<string, string> {
+  return Object.fromEntries(names.map((name) => [`node_modules/${name}/references/INDEX.md`, "# Installed\n"]));
+}
 /** The markdown region `name` holding `body`, as sync writes it, with no trailing newline. */
 export function section(name: string, body: string): string {
   return `<!-- repo:${name} ${regionHash(body)} -->\n${body === "" ? "" : `${body}\n`}<!-- /repo:${name} -->`;

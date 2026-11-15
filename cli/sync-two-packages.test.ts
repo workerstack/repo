@@ -59,6 +59,7 @@ function workspace(extra: Record<string, string> = {}): string {
     "packages/web/package.json",
     JSON.stringify({ dependencies: { "@acme/api": "1.0.0", "@workerstack/ui": "1.0.0" }, name: "@acme/web" }),
   );
+  write(root, "node_modules/@workerstack/ui/references/INDEX.md", "# Ui\n");
   write(root, "packages/web/references/INDEX.md", "# Web\n");
   write(root, "packages/api/package.json", JSON.stringify({ name: "@acme/api" }));
   write(root, "packages/api/references/INDEX.md", "# Api\n");

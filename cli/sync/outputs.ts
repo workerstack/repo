@@ -21,7 +21,7 @@ import { releaseWorkflow } from "./release-workflow.ts";
 import { release } from "./release.ts";
 import { KEEP_REL } from "./repo-dir.constants.ts";
 import { rust } from "./rust.ts";
-import { depsLines, stackNames } from "./stack-deps.ts";
+import { depsLines, linkedStackNames, stackNames } from "./stack-deps.ts";
 import { renderTrees } from "./trees.ts";
 import { turbo } from "./turbo.ts";
 import { vitestProjects } from "./vitest-projects.ts";
@@ -96,7 +96,11 @@ export function index(ctx: SyncContext): GeneratorResult {
   const sections: Region[] = [];
 
   if (ctx.workspace.packages.length > 0) sections.push(section("packages", packageIndexes.entries.join("\n")));
-  const stack = stackNames(ctx.workspace).map((name) => `- [${name}](../node_modules/${name}/${INDEX_PATH})`);
+
+  const stack = linkedStackNames(ctx.workspace, ctx.read).map(
+    (name) => `- [${name}](../node_modules/${name}/${INDEX_PATH})`,
+  );
+
   sections.push(section("stack", stack.join("\n")), ...availableSections(ctx));
 
   const refs = refsSection(ctx.root, "");
@@ -135,7 +139,7 @@ function packageIndexesOf(ctx: SyncContext): PackageIndexes {
     const description = title === undefined ? "" : `: ${title.replace(HEADING_MARK, "")}`;
     const label = manifest.name === undefined || manifest.name === "" ? dir : manifest.name;
     out.entries.push(`- [${label}](../${rel})${description}`);
-    const deps = depsLines(dir, manifest, packages).join("\n");
+    const deps = depsLines({ dir, manifest }, packages, ctx.read).join("\n");
     const refs = refsSection(ctx.root, dir);
     out.errors.push(...refs.errors);
     out.indexes.push(

@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 
 import {
   context,
+  installedIndexes,
   contentOf,
   API,
   WEB,
@@ -35,7 +36,12 @@ it("does nothing when the docs pack is off", () => {
 });
 
 it("creates the file with both sections when it is missing, then each package INDEX with an empty deps one", () => {
-  const ctx = context({ files: PACKAGE_INDEXES, manifest: STACK_ROOT, packages: [WEB, API] });
+  const ctx = context({
+    files: { ...PACKAGE_INDEXES, ...installedIndexes("@workerstack/repo") },
+    manifest: STACK_ROOT,
+    packages: [WEB, API],
+  });
+
   expect(index(ctx)).toStrictEqual({
     errors: [],
     outputs: [
@@ -63,7 +69,7 @@ it("hashes unhashed sections in place in one pass, one line each, and keeps the 
     "# Docs\n\nIntro.\n\n<!-- repo:packages -->\n- stale\n<!-- /repo:packages -->\n\nMiddle.\n\n" +
     "<!-- repo:stack -->\n- stale\n<!-- /repo:stack -->\n\nFooter.\n";
 
-  const files = { ...PACKAGE_INDEXES, "references/INDEX.md": text };
+  const files = { ...PACKAGE_INDEXES, ...installedIndexes("@workerstack/repo"), "references/INDEX.md": text };
   const ctx = context({ files, manifest: STACK_ROOT, packages: [WEB, API] });
   const content = `# Docs\n\nIntro.\n\n${PACKAGES_SECTION}\n\nMiddle.\n\n${REPO_STACK}\n\nFooter.\n\n${EMPTY_REFS}\n`;
   expect(index(ctx).outputs.slice(0, 1)).toStrictEqual([
@@ -91,7 +97,11 @@ it("hashes unhashed sections in place in one pass, one line each, and keeps the 
 
 it("appends absent sections at the end after a blank line", () => {
   const ctx = context({
-    files: { ...PACKAGE_INDEXES, "references/INDEX.md": "# Docs\n\nHand-written." },
+    files: {
+      ...PACKAGE_INDEXES,
+      ...installedIndexes("@workerstack/repo"),
+      "references/INDEX.md": "# Docs\n\nHand-written.",
+    },
     manifest: STACK_ROOT,
     packages: [WEB, API],
   });
@@ -137,7 +147,10 @@ it("fails naming each workspace package that has no references/INDEX.md", () => 
 
 it("lists every @workerstack/* dependency of the root and packages once, sorted", () => {
   const ctx = context({
-    files: { "packages/api/references/INDEX.md": "API\n" },
+    files: {
+      "packages/api/references/INDEX.md": "API\n",
+      ...installedIndexes("@workerstack/ai", "@workerstack/lint", "@workerstack/repo", "@workerstack/worker"),
+    },
     manifest: {
       dependencies: { "@workerstack/repo": "^1.0.0", zod: "^4.0.0" },
       devDependencies: { "@workerstack/lint": "^1.0.0" },

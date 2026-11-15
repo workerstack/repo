@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 
 import {
   context,
+  installedIndexes,
   contentOf,
   API,
   PACKAGE_INDEXES,
@@ -67,6 +68,7 @@ const files = {
   "packages/core/references/INDEX.md": "# Core\n",
   "packages/shared/references/INDEX.md": "# Shared\n",
   "packages/web/references/INDEX.md": "# Web\n",
+  ...installedIndexes("@workerstack/ai", "@workerstack/lint", "@workerstack/ui"),
 };
 
 const packages = [

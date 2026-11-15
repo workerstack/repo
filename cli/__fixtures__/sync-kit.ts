@@ -79,6 +79,7 @@ export function fixture(
   write(root, "package.json", JSON.stringify(manifest));
   write(root, "packages/api/package.json", JSON.stringify({ name: "@acme/api" }));
   write(root, "packages/api/references/INDEX.md", "# API worker\n");
+  write(root, "node_modules/@workerstack/repo/references/INDEX.md", "# Repo\n");
   return root;
 }
 
