@@ -3,6 +3,8 @@ import path from "node:path";
 
 import { afterEach, expect, it, vi } from "vitest";
 
+import { plantProgram } from "../__fixtures__/stub-bin.ts";
+import { childEnv } from "../env.ts";
 import { edited, labels, rerun, turnCalls } from "./__fixtures__/turn-cache-kit.ts";
 import { cleanTemps, git, precommit, recording, SLOW, tempDir, turn, write } from "./__fixtures__/turn-repo.ts";
 import type { Bins } from "./turn-steps.ts";
@@ -132,16 +134,20 @@ it("a gate leaves no temp index behind", { timeout: SLOW }, async () => {
 it("node joining the PATH, then a new node version, each rerun every step", { timeout: SLOW }, async () => {
   const root = edited();
   const bin = tempDir("workerstack-turn-bin-");
+  const tools = ["git", "bun"].map((tool) => Bun.which(tool) ?? tool);
 
-  for (const tool of ["git", "bun"]) fs.symlinkSync(Bun.which(tool) ?? tool, path.join(bin, tool));
+  // A link to git.exe does not start on win32, so PATH takes the real dirs there: Git's cmd dir and bun's hold no node.
+  const isWindows = process.platform === "win32";
 
-  vi.stubEnv("PATH", bin);
+  for (const tool of isWindows ? [] : tools) fs.symlinkSync(tool, path.join(bin, path.basename(tool)));
+  const dirs = isWindows ? tools.map((tool) => path.dirname(tool)) : [];
+  vi.stubEnv("PATH", [bin, ...dirs].join(path.delimiter));
+  expect(Bun.which("node", { PATH: childEnv()["PATH"] ?? "" })).toBeNull();
 
-  /** Puts a `node` on the PATH that prints `version`. */
+  /** Puts a `node` on the PATH that prints `version`: the spawn has no shell, so on win32 it is a real node.exe. */
   function node(version: string): () => void {
     return () => {
-      write(bin, { node: `#!/bin/sh\necho ${version}\n` });
-      fs.chmodSync(path.join(bin, "node"), 0o755);
+      plantProgram(bin, "node", `console.log(${JSON.stringify(version)});\n`);
     };
   }
 

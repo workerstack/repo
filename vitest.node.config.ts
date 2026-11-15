@@ -24,6 +24,8 @@ export default defineConfig({
     // Refuses a run under Bun before any test starts.
     globalSetup: ["dev/refuse-bun.ts"],
     include: ["cli/lint/**/*.test.ts"],
+    // oxlint's RuleTester reserves one ~6 GiB buffer per process, which win32 commits: a 16 GB runner fits one worker.
+    maxWorkers: process.platform === "win32" ? 1 : undefined,
     setupFiles: ["dev/vitest-setup.ts"],
     unstubEnvs: true,
   },

@@ -77,13 +77,18 @@ it("a repo with no commit and no index caches its passing gate", { timeout: SLOW
   expect(await twice(root)).toStrictEqual([["first"], []]);
 });
 
-it("a file git cannot read runs every step each gate and records nothing", { timeout: SLOW }, async () => {
-  const root = edited();
-  write(root, { "notes.bin": "x\n" });
-  fs.chmodSync(path.join(root, "notes.bin"), 0);
-  expect(await twice(root)).toStrictEqual([["first"], ["first"]]);
-  expect(fs.readdirSync(path.join(root, ".repo/tmp/turn"))).toStrictEqual([]);
-});
+// chmod 0 leaves a file readable on win32, so git reads it there.
+it.skipIf(process.platform === "win32")(
+  "a file git cannot read runs every step each gate and records nothing",
+  { timeout: SLOW },
+  async () => {
+    const root = edited();
+    write(root, { "notes.bin": "x\n" });
+    fs.chmodSync(path.join(root, "notes.bin"), 0);
+    expect(await twice(root)).toStrictEqual([["first"], ["first"]]);
+    expect(fs.readdirSync(path.join(root, ".repo/tmp/turn"))).toStrictEqual([]);
+  },
+);
 
 it("a passing gate removes the entries older than a week and keeps the rest", { timeout: SLOW }, async () => {
   const root = edited();

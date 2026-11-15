@@ -5993,7 +5993,7 @@
   "cli/scripts/managed-text.test.ts": ["dade4183879caebf"],
   "cli/scripts/managed-text.ts": ["753b41b12491a44f"],
   "cli/scripts/max-fix-passes.constants.ts": ["5b9f9c4a33857a4a"],
-  "cli/scripts/node-run.test.ts": ["23ac3e018f4b5afe", "7e3c5d68df28087d"],
+  "cli/scripts/node-run.test.ts": ["23ac3e018f4b5afe"],
   "cli/scripts/node-run.ts": ["f0eb470d29296dad"],
   "cli/scripts/opencode-host.test.ts": ["456f6b13b18a3571"],
   "cli/scripts/orchestrate-approvals.ts": [
@@ -8266,8 +8266,8 @@
     "ef0912258ae33a70",
     "ff9a7a12e0084b3c"
   ],
-  "cli/scripts/turn-cache-gate.test.ts": ["577df0ace535000c"],
-  "cli/scripts/turn-cache.test.ts": ["4c690abadeec153d"],
+  "cli/scripts/turn-cache-gate.test.ts": ["577df0ace535000c", "9917939d1ec919ec"],
+  "cli/scripts/turn-cache.test.ts": ["4c690abadeec153d", "ef4f01a897e14f26"],
   "cli/scripts/turn-edges.test.ts": [
     "118e2e6c40512b34",
     "1d1a2df75d51169e",
