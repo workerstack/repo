@@ -5,7 +5,7 @@ import path from "node:path";
 import { PRINT_WIDTH } from "../lint/max-line-width.constants.ts";
 import { canonicalPath } from "../scripts/workspace-root.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
-import { GIT_FILE_PATHS, listedFiles } from "./git-files.ts";
+import { GIT_FILE_PATHS, ignoreBlockLines, listedFiles } from "./git-files.ts";
 import { gitHooks, HOOK_PATHS } from "./git-hooks.ts";
 import { JSON_INDENT } from "./json.constants.ts";
 import { KNIP_CONFIG_PATH, knipConfig } from "./knip-config.ts";
@@ -60,11 +60,12 @@ function untrackedFile(target: string, content: string): Output {
 }
 
 /**
- * The files git sees once this sync lands: those it sees now and each tracked file `outputs` writes, so the first
- * sync and the next agree on the knip entries; null outside git.
+ * The files git sees once this sync lands: those it sees now under the `.gitignore` block this sync writes, and each
+ * tracked file `outputs` writes, so the first sync and the next agree on the knip entries; null outside git.
  */
-function filesAfterSync(root: string, outputs: readonly Output[]): string[] | null {
-  const listed = listedFiles(root, []);
+function filesAfterSync(ctx: SyncContext, outputs: readonly Output[]): string[] | null {
+  const ignored = ignoreBlockLines(ctx.workspace.manifest.name, ctx.config.agents.hosts, outputs);
+  const listed = listedFiles(ctx.root, ignored);
 
   if (listed === null) return null;
 
@@ -95,7 +96,7 @@ export function standards(ctx: SyncContext, outputs: readonly Output[]): ReturnT
         KNIP_CONFIG_PATH,
         knipConfig(ctx.workspace, {
           ignores: ctx.config.knip.ignore,
-          listed: filesAfterSync(ctx.root, outputs),
+          listed: filesAfterSync(ctx, outputs),
           plugins: Object.values(ctx.config.lint.plugins),
         }),
       ),

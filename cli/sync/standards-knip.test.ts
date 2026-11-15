@@ -38,3 +38,12 @@ it("makes a tracked config this sync writes a knip entry before it is on disk, a
     },
   });
 });
+
+it("leaves out what the .gitignore block this sync writes ignores, before that block is on disk", () => {
+  const ctx = gitContext();
+  fs.mkdirSync(path.join(ctx.root, "node_modules/pkg"), { recursive: true });
+  fs.writeFileSync(path.join(ctx.root, "node_modules/pkg/x.config.ts"), "");
+  const { outputs } = standards(ctx, []);
+
+  expect(JSON.stringify(contentOf(outputs, "knip.jsonc"))).not.toContain("node_modules/pkg/x.config.ts");
+});
