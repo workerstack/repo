@@ -51,6 +51,16 @@ describe("env set, block layouts", () => {
     ["an empty multiline block", "{\n  }", '{\n    NEW: "fake-value",\n  }'],
     ["a last value without a comma", '{\n    A: "1"\n  }', '{\n    A: "1",\n    NEW: "fake-value",\n  }'],
     ["a close brace on the last value's line", '{\n    A: "1" }', '{\n    A: "1",\n    NEW: "fake-value", }'],
+    [
+      "a comment with a comma after the last value",
+      '{\n    A: "1" // a, b\n  }',
+      '{\n    A: "1", // a, b\n    NEW: "fake-value",\n  }',
+    ],
+    [
+      "a comment after a trailing comma",
+      '{\n    A: "1", // a, b\n  }',
+      '{\n    A: "1", // a, b\n    NEW: "fake-value",\n  }',
+    ],
   ])("adds to %s in its layout", SPAWN, async (_label, block, after) => {
     const w = await world({ [ENV_REL]: envFile(`{ prod: ${block} }`) });
     expect(await env(w, PLAIN)).toMatchObject({ code: 0, err: "" });
@@ -59,8 +69,8 @@ describe("env set, block layouts", () => {
 });
 
 describe("env set, which config and which import", () => {
-  it("writes to the child env, not the parent it names", SPAWN, async () => {
-    const head = `${IMPORT}const base = defineEnv({ prod: {} });\n`;
+  it.each(["const", "export const"])("writes to the child env, not the %s parent it names", SPAWN, async (bind) => {
+    const head = `${IMPORT}${bind} base = defineEnv({ prod: {} });\n`;
     const w = await world({ [ENV_REL]: envFile("{ parent: base, prod: {} }", head) });
     expect(await env(w, PLAIN)).toMatchObject({ code: 0, err: "" });
     expect(read(w)).toBe(envFile('{ parent: base, prod: { NEW: "fake-value" } }', head));
@@ -129,6 +139,16 @@ describe("env ls and get, edges", () => {
   ])("refuses $label", SPAWN, async ({ argv, line, text }) => {
     const w = await world({ [ENV_REL]: text });
     expect(await env(w, argv)).toMatchObject({ code: 1, err: `repo env: ${line}\n` });
+  });
+});
+
+describe("env ls, configs it cannot read", () => {
+  it("lists no key for a config named by a variable with no value or bound by a pattern", SPAWN, async () => {
+    const head = `${IMPORT}const { other } = { other: 1 };\nlet config;\nexport const unread = defineEnv(config);\n`;
+    const w = await world({ [ENV_REL]: envFile('{ prod: { "A": "1" } }', head) });
+    const got = await env(w, ["ls"]);
+    expect(got).toMatchObject({ code: 0, err: "" });
+    expect(got.out).toBe(`KEY  SCOPE  KIND   FILE    USED BY\nA    prod   plain  ${ENV_REL}  -\n`);
   });
 });
 

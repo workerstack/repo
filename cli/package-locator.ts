@@ -7,8 +7,6 @@
  */
 import path from "node:path";
 
-import ts from "typescript-5.9";
-
 import { isString } from "./json.ts";
 import { posix } from "./ts-program.ts";
 import { fieldsOf } from "./type-surface-blame.ts";
@@ -35,7 +33,7 @@ function markerOf(lookups: Lookups, at: string): string | undefined {
 
   if (manifests.has(at)) return manifests.get(at);
   const file = path.join(at, MANIFEST);
-  const isMarker = file === own || (ts.sys.fileExists(file) && nameOf(lookups, file) !== null);
+  const isMarker = file === own || nameOf(lookups, file) !== null;
   const above = path.dirname(at);
   let marker: string | undefined;
 

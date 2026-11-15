@@ -21,6 +21,11 @@ function constEnvFile(init: string): string {
   return `${IMPORT}\nconst config = ${init};\nexport const repoEnv = defineEnv(config);\nprocess.env.TOKEN;\n`;
 }
 
+/** A defineEnv file whose config `init` is written in the call. */
+function inlineEnvFile(init: string): string {
+  return `${IMPORT}\nexport const repoEnv = defineEnv(${init});\n`;
+}
+
 const NPM_TOKEN = JSON.stringify(`npm_${"fake".repeat(4)}`);
 const CONFIG_BLOCKS = `{ local: {}, dev: { SITE: "dev" }, prod: { KEY: ${NPM_TOKEN} }, process: {} }`;
 
@@ -52,5 +57,30 @@ describe("checkEnvValues, a config held in a same-file const", () => {
 
   it("skips a const that holds no object literal", () => {
     expect(linesFor(constEnvFile("makeConfig()"))).toHaveLength(1);
+  });
+});
+
+describe("checkEnvValues, the declarations and keys it reads", () => {
+  it("reads an exported const", () => {
+    expect(linesFor(constEnvFile(CONFIG_BLOCKS).replace("const config", "export const config"))).toHaveLength(4);
+  });
+
+  it("skips a let, which a later line may reassign", () => {
+    expect(linesFor(constEnvFile(CONFIG_BLOCKS).replace("const config", "let config"))).toHaveLength(1);
+  });
+
+  it("skips a block with a numeric key, as it does a spread", () => {
+    const blocks = '{ local: {}, dev: { 1: "one", APEX_DOMAIN: "dev.example.com" }, prod: { SITE: "prod" } }';
+    expect(linesFor(inlineEnvFile(blocks))).toStrictEqual([]);
+  });
+
+  it.each([
+    ["a quoted key as the file spells it", `"KEY": ${NPM_TOKEN}`, '"KEY"'],
+    ["a template literal with no expressions", `KEY: \`npm_${"fake".repeat(4)}\``, "KEY"],
+  ])("names the plain secret of %s", (_label, member, key) => {
+    expect(linesFor(inlineEnvFile(`{ local: {}, dev: {}, prod: { ${member} } }`))).toStrictEqual([
+      `env: ${FILE} prod.${key} looks like a secret (npm_ prefix) but is plain; ` +
+        `run \`bun repo env set ${key} --scope prod\``,
+    ]);
   });
 });

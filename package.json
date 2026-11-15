@@ -129,7 +129,6 @@
     "stylelint-order": "8.1.2",
     "turbo": "2.11.10",
     "typescript": "7.0.2",
-    "typescript-5.9": "npm:typescript@5.9.3",
     "yaml": "2.9.1"
   },
   "devDependencies": {

@@ -125,6 +125,8 @@ describe("checkEnvValues, process reads", () => {
     ["env from process", 'import { env } from "process";\nexport const token = env.TOKEN;\n'],
     ["env from node:process", 'import { env } from "node:process";\nexport const token = env.TOKEN;\n'],
     ["env from cloudflare:workers", 'import { env } from "cloudflare:workers";\nexport const token = env.TOKEN;\n'],
+    ["a renamed env import", 'import { env as vars } from "process";\nexport const token = vars.TOKEN;\n'],
+    ["an optional read", "export const token = process.env?.TOKEN;\n"],
   ])("fails an undeclared read through %s", (_label, around) => {
     const lines = linesFor(envFile(PROCESS_BLOCKS, around));
     expect(lines).toHaveLength(1);

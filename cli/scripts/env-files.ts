@@ -1,12 +1,23 @@
-/** The defineEnv files of a repo: found among tracked files, read as a TS AST, loaded, and their users. */
+/** The defineEnv files of a repo: found among tracked files, read with oxc-parser, loaded, and their users. */
 import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import ts from "typescript-5.9";
+import type { Expression, ObjectExpression, ObjectProperty } from "oxc-parser";
 import { z } from "zod";
 
-import { DEFINE_ENV, DEFINE_ENV_CALL, SCANNED_EXTENSIONS } from "../check-env-values.constants.ts";
+import { DEFINE_ENV_CALL, SCANNED_EXTENSIONS } from "../check-env-values.constants.ts";
+import {
+  defineCalls,
+  isAssignment,
+  keyName,
+  nameOf,
+  sourceOf,
+  topDeclarations,
+  unwrapped,
+  type DefineCall,
+  type Source,
+} from "../env-syntax.ts";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
 import { listFiles } from "../list-files.ts";
 import { isTestFile } from "../test-files.ts";
@@ -30,113 +41,69 @@ const PARENT = "parent";
 const TS_EXTENSION = /\.[cm]?tsx?$/u;
 const SPECIFIER = /(?:from|import)\s*\(?\s*["']([^"']+)["']/gu;
 
-/** `text` of `rel` as a TS source file. */
-export function sourceOf(rel: string, text: string): ts.SourceFile {
-  return ts.createSourceFile(rel, text, ts.ScriptTarget.Latest, true);
-}
+/** The object literal a call is given, inline or by the name of a top-level variable; undefined for anything else. */
+function configOf(source: Source, { call }: DefineCall): ObjectExpression | undefined {
+  const argument = call.arguments.slice(0, 1).map(unwrapped);
+  const named = new Set(argument.flatMap((node) => (node.type === "Identifier" ? [node.name] : [])));
 
-/** The plain name of a key or binding; empty for a computed one or a pattern. */
-function nameOf(node: ts.Node): string {
-  return ts.isIdentifier(node) || ts.isStringLiteral(node) ? node.text : "";
-}
+  const held = topDeclarations(source.program)
+    .flatMap((statement) => statement.declarations)
+    .filter((declaration) => named.has(nameOf(declaration.id) ?? ""))
+    .flatMap((declaration) => (declaration.init === null ? [] : [unwrapped(declaration.init)]));
 
-/** `node` with every `as`, `satisfies` and pair of parentheses taken off. */
-function bare(node: ts.Expression): ts.Expression {
-  let inner = node;
-
-  while (ts.isAsExpression(inner) || ts.isSatisfiesExpression(inner) || ts.isParenthesizedExpression(inner))
-    inner = inner.expression;
-
-  return inner;
-}
-
-/** Every defineEnv call of `source`, in order. */
-function defineCalls(source: ts.SourceFile): ts.CallExpression[] {
-  const calls: ts.CallExpression[] = [];
-
-  function visit(node: ts.Node): void {
-    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === DEFINE_ENV)
-      calls.push(node);
-    ts.forEachChild(node, visit);
-  }
-
-  visit(source);
-
-  return calls;
-}
-
-/** The object literal a call is given, inline or by the name of a top-level const; undefined for anything else. */
-function configOf(source: ts.SourceFile, call: ts.CallExpression): ts.ObjectLiteralExpression | undefined {
-  const argument = call.arguments.slice(0, 1).map(bare);
-  const named = new Set(argument.filter(ts.isIdentifier).map((name) => name.text));
-
-  const held = source.statements
-    .filter(ts.isVariableStatement)
-    .flatMap((statement) => statement.declarationList.declarations)
-    .filter((declaration) => named.has(nameOf(declaration.name)))
-    .map((declaration) => declaration.initializer)
-    .filter((initializer): initializer is ts.Expression => initializer !== undefined);
-
-  return [...argument, ...held.map(bare)].find(ts.isObjectLiteralExpression);
+  return [...argument, ...held].find((node): node is ObjectExpression => node.type === "ObjectExpression");
 }
 
 /** The configs of every defineEnv call of `source` that it can read. */
-function configsOf(source: ts.SourceFile): ts.ObjectLiteralExpression[] {
-  return defineCalls(source).flatMap((call) => configOf(source, call) ?? []);
+function configsOf(source: Source): ObjectExpression[] {
+  return defineCalls(source.program).flatMap((call) => configOf(source, call) ?? []);
 }
 
-/** The properties of an object literal that assign a plain name, by name. */
-export function propertiesOf(node: ts.ObjectLiteralExpression): Map<string, ts.PropertyAssignment> {
-  const found = new Map<string, ts.PropertyAssignment>();
+/** The `key: value` members of an object literal whose key is a plain name, by name. */
+export function propertiesOf(node: ObjectExpression): Map<string, ObjectProperty> {
+  const found = new Map<string, ObjectProperty>();
 
-  for (const member of node.properties.filter(ts.isPropertyAssignment)) {
-    const name = nameOf(member.name);
+  for (const member of node.properties.filter(isAssignment)) {
+    const name = keyName(member);
 
-    if (name !== "") found.set(name, member);
+    if (name !== undefined) found.set(name, member);
   }
 
   return found;
 }
 
 /** The names the configs of `source` give as `parent`. */
-function parentsOf(configs: readonly ts.ObjectLiteralExpression[]): Set<string> {
-  const parents = configs
-    .map((config) => propertiesOf(config).get(PARENT)?.initializer)
-    .filter((node): node is ts.Expression => node !== undefined);
+function parentsOf(configs: readonly ObjectExpression[]): Set<string> {
+  const parents = configs.flatMap((config) => {
+    const value: Expression | undefined = propertiesOf(config).get(PARENT)?.value;
 
-  return new Set(parents.filter(ts.isIdentifier).map((node) => node.text));
-}
+    return value?.type === "Identifier" ? [value.name] : [];
+  });
 
-/** The binding a defineEnv call initializes, `x` of `const x = defineEnv(…)`; empty when it is bound to none. */
-function bindingOf(call: ts.CallExpression): string {
-  return [call.parent]
-    .filter(ts.isVariableDeclaration)
-    .map((declaration) => nameOf(declaration.name))
-    .join("");
+  return new Set(parents);
 }
 
 /** The config of the env `source` stands for: of several, the last that no other names as its parent. */
-export function mainConfig(source: ts.SourceFile): ts.ObjectLiteralExpression | undefined {
-  const calls = defineCalls(source);
+export function mainConfig(source: Source): ObjectExpression | undefined {
   const parents = parentsOf(configsOf(source));
-  const children = calls.filter((call) => !parents.has(bindingOf(call)));
+  const children = defineCalls(source.program).filter((call) => !parents.has(call.binding));
 
   return children.map((call) => configOf(source, call)).at(LAST);
 }
 
 /** Every value the defineEnv configs of `source` declare in their own global and scope blocks. */
-function declaredIn(source: ts.SourceFile): Declared[] {
+function declaredIn(source: Source): Declared[] {
   return configsOf(source).flatMap((config) => {
     const blocks = propertiesOf(config);
 
     return SCOPES.flatMap((scope) => {
-      const block = blocks.get(scope)?.initializer;
+      const block = blocks.get(scope)?.value;
 
-      if (block === undefined || !ts.isObjectLiteralExpression(block)) return [];
+      if (block?.type !== "ObjectExpression") return [];
 
-      return [...propertiesOf(block)].map(([key, member]): Declared => {
-        const value = member.initializer;
-        const isSealed = ts.isCallExpression(value) && value.expression.getText(source) === SEALED_NAME;
+      return [...propertiesOf(block)].map(([key, { value }]): Declared => {
+        const isSealed =
+          value.type === "CallExpression" && source.text.slice(value.callee.start, value.callee.end) === SEALED_NAME;
 
         return { key, kind: isSealed ? "sealed" : "plain", scope };
       });
@@ -160,11 +127,12 @@ export function envFiles(root: string, tracked: readonly string[]): Map<string, 
     if (!scanned || rel.split("/").includes(FIXTURES_DIR)) continue;
     const text = fs.readFileSync(path.join(root, rel), "utf8");
 
-    // The text check is cheap; only a real call in the syntax tree makes an env file,
-    // not one named in a string or a comment.
+    // The text check is cheap; only a real call in the syntax tree makes an env file, not one named in a string or a
+    // comment. A file that does not parse declares nothing but stays one, so a verb names its parse error.
     const source = text.includes(DEFINE_ENV_CALL) ? sourceOf(rel, text) : undefined;
 
-    if (source !== undefined && defineCalls(source).length > 0) found.set(rel, declaredIn(source));
+    if (source !== undefined && (source.isBroken || defineCalls(source.program).length > 0))
+      found.set(rel, declaredIn(source));
   }
 
   return found;
