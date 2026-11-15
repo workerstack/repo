@@ -42,7 +42,12 @@ jobs:
       - name: Mutate this shard
         env:
           SHARD: \${{ matrix.shard }}
-        run: bun repo mutate --shard "$SHARD/1" --report "mutation-$SHARD.json"
+        run: |
+          sudo mkdir -p /sys/fs/cgroup/mutate
+          awk '/^MemTotal:/ { print $2 - 2097152 "K" }' /proc/meminfo | sudo tee /sys/fs/cgroup/mutate/memory.max
+          echo 0 | sudo tee /sys/fs/cgroup/mutate/memory.swap.max
+          echo $$ | sudo tee /sys/fs/cgroup/mutate/cgroup.procs
+          bun repo mutate --shard "$SHARD/1" --report "mutation-$SHARD.json"
       - uses: ${UPLOAD}
         if: always()
         with:

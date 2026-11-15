@@ -25,7 +25,9 @@ describe("nightly jobs", () => {
     const text = render(8);
     expect(text).toContain("name: mutate (${{ matrix.shard }}/8)");
     expect(text).toContain("shard: [1, 2, 3, 4, 5, 6, 7, 8]");
-    expect(text).toContain('run: bun repo mutate --shard "$SHARD/8" --report "mutation-$SHARD.json"');
+    expect(text).toContain(
+      'cgroup.procs\n          bun repo mutate --shard "$SHARD/8" --report "mutation-$SHARD.json"\n',
+    );
   });
 
   it("names each upload by its shard and downloads by the same prefix", () => {
@@ -143,7 +145,9 @@ describe("nightly mutate-rust job", () => {
     expect(text).toContain("timeout-minutes: 180");
     expect(text).toContain("shard: [1, 2]");
     expect(text).toContain("cargo-mutants@27.1.0");
-    expect(text).toContain('run: bun repo mutate --rust --shard "$SHARD/2" --report "mutation-rust-$SHARD.json"');
+    expect(text).toContain(
+      `cgroup.procs\n          bun repo mutate --rust --shard "$SHARD/2" --report "mutation-rust-$SHARD.json"\n`,
+    );
     expect(text).toContain(
       "name: mutation-rust-${{ matrix.shard }}\n          path: mutation-rust-${{ matrix.shard }}.json",
     );
