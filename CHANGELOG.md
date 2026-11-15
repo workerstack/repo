@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Sync makes each `*.config.ts` and `*.worker.ts` file git sees a knip entry of its workspace, since tools load them by name or path, while a gitignored one, such as a clone under `.repo/scratch/`, stays out of knip, and lets `*.worker.ts` default-export in the generated oxlint config
+- Sync makes each `*.config.ts` and `*.worker.ts` file git sees, or a tracked one the same sync writes, a knip entry of its workspace, since tools load them by name or path, while a gitignored one, such as a clone under `.repo/scratch/`, stays out of knip, and lets `*.worker.ts` default-export in the generated oxlint config
 - Put agents.defaultApproval, agents.defaultEffort and agents.defaultStrategy in a gitignored repo.config.local.ts, set with defineLocalConfig, to override repo.config.ts for one checkout.
 - `link.push: "allow"` in repo.config.ts lets a push go while a public package depends on a linked package: the pre-push check prints `repo link: warning: <package> is public and depends on linked <name>; pushing since link.push is "allow"` and passes. The default, "block", refuses the push as before.
 - A linked source checkout now updates every repo on this machine that links it when its main branch moves; bun repo link push does it by hand and bun repo link status lists them.

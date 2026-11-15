@@ -60,6 +60,20 @@ function untrackedFile(target: string, content: string): Output {
 }
 
 /**
+ * The files git sees once this sync lands: those it sees now and each tracked file `outputs` writes, so the first
+ * sync and the next agree on the knip entries; null outside git.
+ */
+function filesAfterSync(root: string, outputs: readonly Output[]): string[] | null {
+  const listed = listedFiles(root, []);
+
+  if (listed === null) return null;
+
+  const written = outputs.flatMap((output) => (output.kind === "file" && output.tracked ? [output.path] : []));
+
+  return [...new Set([...listed, ...written])];
+}
+
+/**
  * Under the standards pack, `.oxlintrc.jsonc` (with an override per `lint.skip` entry), `knip.jsonc` (with the
  * `knip.ignore` entries) and `.oxfmtrc.jsonc`, all untracked and sync's own, and the git hooks; a hand-written hook
  * or a skip of a rule the config never runs refuses all. It runs after the generators so the oxfmt config can ignore
@@ -81,7 +95,7 @@ export function standards(ctx: SyncContext, outputs: readonly Output[]): ReturnT
         KNIP_CONFIG_PATH,
         knipConfig(ctx.workspace, {
           ignores: ctx.config.knip.ignore,
-          listed: listedFiles(ctx.root, []),
+          listed: filesAfterSync(ctx.root, outputs),
           plugins: Object.values(ctx.config.lint.plugins),
         }),
       ),
