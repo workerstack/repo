@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The checks that read TypeScript 7's API wait for its tsgo process to exit before they return. On Windows, tsgo outlived the check and kept its working dir locked, so that dir could not be removed.
 - removeTree unlocks a locked tree after its first failed removal instead of after ten timed retries, so a locked temp dir on macOS no longer costs 4.5 s
 - removeTree, and so the temp-root guard, removes a tree a killed test left with a dir it may not list or empty, on Linux and macOS, instead of failing every later test run
 - `repo sync` writes the owned `bunfig.toml` in each workspace package dir too, with the same refusal of a hand-written one per path. Bun reads it only from its cwd, and the commit gate runs tests with cwd set to the package, where auto-install was on and could resolve a missing package from Bun's global cache.

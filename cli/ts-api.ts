@@ -1,10 +1,13 @@
 /** The one way this package opens TypeScript 7's API and reads a tsconfig through it. */
+import { ChildProcess } from "node:child_process";
+import { once } from "node:events";
 import fs from "node:fs";
 import path from "node:path";
 
 import { parse, type ParseError } from "jsonc-parser";
 import type { SourceFile } from "typescript/unstable/ast";
 import { API, type CompilerOptions, type Diagnostic, type Project } from "typescript/unstable/async";
+import { z } from "zod";
 
 import type { Result } from "./result.ts";
 import { errorMessage } from "./sync-errors.ts";
@@ -43,7 +46,30 @@ const NO_OWNER_OPTIONS = {
 const CHAIN_INDENT = "  ";
 
 /**
- * Runs `work` on one API rooted at `cwd`, then closes it, which ends its tsgo process whether `work` threw or not.
+ * Where an API holds the tsgo process it spawned, once a request started it. The API keeps it private, and its close
+ * returns while tsgo still runs; on Windows tsgo then outlived the check and held its working dir. A TypeScript whose
+ * API holds it elsewhere fails this parse, loudly.
+ */
+function tsgoHolder() {
+  return z.object({ client: z.object({ process: z.instanceof(ChildProcess).optional() }) });
+}
+
+/** The tsgo process `api` spawned; none before its first request. */
+export function tsgoOf(api: API): ChildProcess | undefined {
+  return tsgoHolder().parse(api).client.process;
+}
+
+/** Destroys `child`'s stdin, so tsgo reads its end on every platform, and waits for it to exit; at once when it has. */
+async function exited(child: ChildProcess): Promise<void> {
+  const exit = child.exitCode === null && child.signalCode === null ? once(child, "exit") : null;
+
+  child.stdin?.destroy();
+  await exit;
+}
+
+/**
+ * Runs `work` on one API rooted at `cwd`, then closes it and waits for its tsgo process to exit, whether `work` threw
+ * or not.
  * The API reads a file in `virtual` from there, and every other file from disk.
  */
 export async function withTsApi<T>(cwd: string, work: (run: TsRun) => Promise<T>): Promise<T> {
@@ -53,7 +79,11 @@ export async function withTsApi<T>(cwd: string, work: (run: TsRun) => Promise<T>
   try {
     return await work({ api, opened: 0, virtual });
   } finally {
+    const tsgo = tsgoOf(api);
+
     await api.close();
+
+    if (tsgo !== undefined) await exited(tsgo);
   }
 }
 
