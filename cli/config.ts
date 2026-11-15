@@ -3,6 +3,7 @@ import path from "node:path";
 
 import type { z } from "zod";
 
+import { checkLintPlugins } from "./check-lint-plugins.ts";
 import { ciOf } from "./ci-schema.ts";
 import { DEFAULT_MAX_CHANGED_LINES } from "./commit-config.ts";
 import type { ResolvedCommit, ResolvedConfig, LoadResult } from "./config-resolved.types.ts";
@@ -54,6 +55,9 @@ export type {
   KnipConfig,
   KnipIgnoreEntry,
   LintConfig,
+  LintRuleEntry as LintRuleConfig,
+  LintRules as LintRuleConfigRules,
+  RuleSetting as LintRuleConfigSetting,
   LintSkipEntry,
   NightlyConfig,
   OwnerConfig,
@@ -62,6 +66,8 @@ export type {
 
 export type {
   LintBoundaries,
+  LintRuleEntry,
+  LintRuleSetting,
   LintSkip,
   LoadResult,
   ResolvedAgents,
@@ -81,7 +87,7 @@ export const DEFAULT_COMMIT: ResolvedCommit = { maxChangedLines: DEFAULT_MAX_CHA
  * - `agents`: what agents get, and how a session runs by default (agents pack)
  * - `commit`: the commit size limit (standards pack)
  * - `tdd`: test-first for private packages too (standards pack)
- * - `lint`: lint exceptions, package layers, the Tailwind sheet (standards pack)
+ * - `lint`: lint exceptions, package layers, the Tailwind sheet, your own plugins and their rules (standards pack)
  * - `knip`: what the unused-code check may skip (standards pack)
  * - `coverage`: the ratchet files and what mutation testing changes
  * - `nightly`: the nightly run's shards and secrets (release pack)
@@ -103,7 +109,9 @@ export const DEFAULT_COMMIT: ResolvedCommit = { maxChangedLines: DEFAULT_MAX_CHA
  * });
  * ```
  */
-export function defineConfig<const P extends Pack = DefaultPack>(config: RepoConfig<P>): RepoConfig<P> {
+export function defineConfig<const P extends Pack = DefaultPack, const N extends string = never>(
+  config: RepoConfig<P, N>,
+): RepoConfig<P, N> {
   return config;
 }
 
@@ -158,7 +166,15 @@ export async function loadConfig(root: string, importModule: ImportConfig = impo
 
   if (!parsed.success) return fail(parsed.error.issues.flatMap(describeIssue));
 
-  return { config: resolve(parsed.data), ok: true };
+  const config = resolve(parsed.data);
+
+  if (Object.keys(config.lint.plugins).length > 0) {
+    const errors = await checkLintPlugins(root, config.lint);
+
+    if (errors.length > 0) return fail(errors);
+  }
+
+  return { config, ok: true };
 }
 
 /** A parsed config with every omitted value filled in. */

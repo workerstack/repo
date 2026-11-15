@@ -15,7 +15,12 @@ function dep(reason = "spawned by path"): KnipIgnore {
 
 /** Checks `ignores` against `issues` in a root with `files` and a manifest depending on oxlint. */
 async function check(ignores: KnipIgnore[], issues: JsonObject[], files: Record<string, string> = {}) {
-  return await checkKnip(knipRoot(files, { oxlint: "1" }), ignores, answering(report(...issues)));
+  return await checkKnip({
+    ignores,
+    plugins: [],
+    run: answering(report(...issues)),
+    workspace: knipRoot(files, { oxlint: "1" }),
+  });
 }
 
 describe("an ignore matched by issues", () => {
@@ -95,11 +100,12 @@ describe("a stale entry once knip has run", () => {
     const manifest = { devDependencies: { "left-pad": "1" }, name: "a" };
     const stdout = report({ devDependencies: [{ name: "left-pad" }], file: "a/package.json" });
 
-    const out = await checkKnip(
-      { ...ws, packages: [{ dir: "a", manifest }] },
-      [{ dependency: "left-pad", reason: "r" }],
-      answering(stdout),
-    );
+    const out = await checkKnip({
+      ignores: [{ dependency: "left-pad", reason: "r" }],
+      plugins: [],
+      run: answering(stdout),
+      workspace: { ...ws, packages: [{ dir: "a", manifest }] },
+    });
 
     expect(out.problems).toStrictEqual([]);
   });

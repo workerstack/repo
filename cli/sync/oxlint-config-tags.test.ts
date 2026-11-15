@@ -30,26 +30,26 @@ function configOf(lint: ResolvedLint): Config {
 }
 
 it("oxlintConfig writes the tags as the options of repo/boundaries, and none without lint.boundaries", () => {
-  expect(configOf({ boundaries: { allow: ALLOW, tags: TAGS }, skip: [] }).rules["repo/boundaries"]).toStrictEqual([
-    "error",
-    { allow: ALLOW, tags: TAGS },
-  ]);
-  expect(configOf({ skip: [] }).rules["repo/boundaries"]).toBe("error");
+  expect(
+    configOf({ boundaries: { allow: ALLOW, tags: TAGS }, plugins: {}, rules: [], skip: [] }).rules["repo/boundaries"],
+  ).toStrictEqual(["error", { allow: ALLOW, tags: TAGS }]);
+  expect(configOf({ plugins: {}, rules: [], skip: [] }).rules["repo/boundaries"]).toBe("error");
 });
 
 it("oxlintConfig tags the root package too", () => {
   const tags = { ...TAGS, "@app/root": "app" };
-  expect(configOf({ boundaries: { allow: ALLOW, tags }, skip: [] }).rules["repo/boundaries"]).toStrictEqual([
-    "error",
-    { allow: ALLOW, tags },
-  ]);
+  expect(
+    configOf({ boundaries: { allow: ALLOW, tags }, plugins: {}, rules: [], skip: [] }).rules["repo/boundaries"],
+  ).toStrictEqual(["error", { allow: ALLOW, tags }]);
 });
 
 it("oxlintConfig takes a nameless root, whose packages alone a tag can name", () => {
   const nameless: Workspace = { ...APP, manifest: { workspaces: ["packages/*"] } };
-  expect(oxlintConfig(nameless, { boundaries: { allow: ALLOW, tags: TAGS }, skip: [] }).ok).toBe(true);
+  expect(
+    oxlintConfig(nameless, { boundaries: { allow: ALLOW, tags: TAGS }, plugins: {}, rules: [], skip: [] }).ok,
+  ).toBe(true);
   const rootTagged = { allow: ALLOW, tags: { ...TAGS, "@app/root": "app" } };
-  expect(oxlintConfig(nameless, { boundaries: rootTagged, skip: [] })).toStrictEqual({
+  expect(oxlintConfig(nameless, { boundaries: rootTagged, plugins: {}, rules: [], skip: [] })).toStrictEqual({
     errors: ['repo.config.ts: lint.boundaries.tags: "@app/root" is not a workspace package'],
     ok: false,
   });
@@ -73,7 +73,7 @@ it.each([
     'lint.boundaries.allow.gone: no package carries tag "gone"; drop the entry',
   ],
 ])("oxlintConfig refuses %j and writes nothing", (boundaries, error) => {
-  expect(oxlintConfig(APP, { boundaries, skip: [] })).toStrictEqual({
+  expect(oxlintConfig(APP, { boundaries, plugins: {}, rules: [], skip: [] })).toStrictEqual({
     errors: [`repo.config.ts: ${error}`],
     ok: false,
   });

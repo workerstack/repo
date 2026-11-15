@@ -1,5 +1,6 @@
 import type { Host, Pack, SkillPack } from "./config.ts";
 import type { ResolvedCoverage } from "./coverage-config.ts";
+import type { Json } from "./json.ts";
 import type { ResolvedKnip } from "./knip-schema.ts";
 import type { ResolvedNightly } from "./nightly-config.ts";
 import type { ResolvedOwner } from "./owner-config.ts";
@@ -55,8 +56,23 @@ export type LintTailwind = {
   readonly entryPoint: string;
 };
 
+/** One consumer rule's setting: on at error severity, with the options a rule takes after `"error"`. */
+export type LintRuleSetting = "error" | readonly ["error", ...Json[]];
+
+/** One `lint.rules` entry: consumer plugin rules turned on, for the files its globs match or everywhere. */
+export type LintRuleEntry = {
+  /** Globs of the files the rules cover, relative to the repo root; absent when they cover every file. */
+  readonly files?: readonly string[] | undefined;
+  /** Rule key, `<plugin>/<rule>` with a plugin from `lint.plugins`, to its setting. */
+  readonly rules: Readonly<Record<string, LintRuleSetting>>;
+};
+
 /** What the generated oxlint config and `repo check` read from `lint`. */
 export type ResolvedLint = {
+  /** The consumer's oxlint plugins by name to their repo-relative file, without a leading `./`; empty when none. */
+  readonly plugins: Readonly<Record<string, string>>;
+  /** The consumer plugin rules turned on, in config order; empty when the config lists none. */
+  readonly rules: readonly LintRuleEntry[];
   /** The reasoned exceptions to lint rules; empty when the config lists none. */
   readonly skip: readonly LintSkip[];
   /** The package tags `repo/boundaries` judges imports by; absent when the config sets none. */

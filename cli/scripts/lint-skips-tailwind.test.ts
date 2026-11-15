@@ -20,12 +20,14 @@ it("checkLintSkips returns sync's error for two tailwind entries and no entryPoi
   });
   const run = vi.fn<typeof captureTool>(captureTool);
   const workspace = { manifest: { name: "app" }, packages: [], root };
-  expect(await checkLintSkips(workspace, { skip: [SKIP] }, { run, scripts: [] })).toStrictEqual({
-    problems: [
-      "repo.config.ts: lint.tailwind.entryPoint: two sheets import tailwindcss (src/admin.css, src/app.css); " +
-        "set the one oxlint checks classes against",
-    ],
-    report: [],
-  });
+  expect(await checkLintSkips(workspace, { plugins: {}, rules: [], skip: [SKIP] }, { run, scripts: [] })).toStrictEqual(
+    {
+      problems: [
+        "repo.config.ts: lint.tailwind.entryPoint: two sheets import tailwindcss (src/admin.css, src/app.css); " +
+          "set the one oxlint checks classes against",
+      ],
+      report: [],
+    },
+  );
   expect(run).not.toHaveBeenCalled();
 });

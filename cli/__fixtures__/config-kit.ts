@@ -15,7 +15,7 @@ export const AGENTS = {
   skills: [],
 };
 export const COMMIT = { maxChangedLines: 1000 };
-export const LINT = { skip: [] };
+export const LINT = { plugins: {}, rules: [], skip: [] };
 export const KNIP = { ignore: [] };
 export const CI = { checks: {} };
 export const NIGHTLY = { secrets: [], shards: 1 };

@@ -6,7 +6,7 @@ import { BASE_CONFIG } from "../../__fixtures__/base-config.ts";
 import type { Output, SyncContext } from "../outputs.ts";
 
 /** A sync context of `packs` for a workspace named `name`, with nothing on disk. */
-export function context(packs: Pack[], name = "app", lint: ResolvedLint = { skip: [] }): SyncContext {
+export function context(packs: Pack[], name = "app", lint: ResolvedLint = { plugins: {}, rules: [], skip: [] }): SyncContext {
   return {
     config: {
       agents: { ...AGENT_DEFAULTS, hosts: [], skills: [] },

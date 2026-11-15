@@ -134,7 +134,7 @@ it("leaves a config that still loads, with the pack in agents.skills", async () 
       coverage: DEFAULT_COVERAGE,
       knip: { ignore: [] },
       link: undefined,
-      lint: { skip: [] },
+      lint: { plugins: {}, rules: [], skip: [] },
       nightly: DEFAULT_NIGHTLY,
       owner: undefined,
       packs: ["agents", "docs"],

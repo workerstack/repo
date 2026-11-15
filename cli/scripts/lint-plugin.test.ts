@@ -183,7 +183,11 @@ it(
 it("runs a config whose skip names only magic rules, which the plugin does not have", { timeout: SLOW }, async () => {
   const root = consumer({ "src/clean.ts": PLANTED["src/clean.ts"] });
   const skip = { files: ["src/clean.ts"], reason: "retry tuning lives here", rules: ["repo/magic-number"] };
-  const built = oxlintConfig({ manifest: { name: "app" }, packages: [], root }, { skip: [skip] });
+
+  const built = oxlintConfig(
+    { manifest: { name: "app" }, packages: [], root },
+    { plugins: {}, rules: [], skip: [skip] },
+  );
 
   if (!built.ok) throw new Error(built.errors.join("\n"));
   fs.writeFileSync(path.join(root, ".oxlintrc.jsonc"), built.value);

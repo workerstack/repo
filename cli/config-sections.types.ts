@@ -3,6 +3,7 @@ import type { BuiltInLabel } from "./ci-schema.constants.ts";
 import type { NonEmpty, Taken } from "./config-helpers.types.ts";
 import type { LintBoundaries, LintTailwind } from "./config-resolved.types.ts";
 import type { Host, SkillPack } from "./config-schema.ts";
+import type { StockPlugin } from "./lint-schema.ts";
 import type { Effort, Approval, Strategy } from "./scripts/strategy.types.ts";
 import type { GeneratedTask } from "./turbo-config.constants.ts";
 import type { TurboTask } from "./turbo-config.ts";
@@ -167,7 +168,8 @@ export type LintSkipEntry = {
   files: NonEmpty<string>;
   /**
    * The rules to turn off, as lint prints them: `"repo/no-module-state"`, `"eslint/no-await-in-loop"`,
-   * `"typescript/no-unsafe-call"`, `"stylelint/<rule>"` or `"tailwindcss/<rule>"`.
+   * `"typescript/no-unsafe-call"`, `"stylelint/<rule>"`, `"tailwindcss/<rule>"` or a consumer plugin's
+   * `"<name>/<rule>"`.
    */
   rules: NonEmpty<string>;
   /**
@@ -177,14 +179,56 @@ export type LintSkipEntry = {
   reason: string;
 };
 
-/** `lint`: exceptions and extra settings for `bun repo lint`. */
-export type LintConfig = {
+/** A consumer rule turned on: `"error"`, or `["error", options]` where the options are JSON, which load checks. */
+export type RuleSetting = "error" | readonly ["error", ...unknown[]];
+
+/** The rule keys of plugins `N`: any key while the names are not known, none while no plugin is registered. */
+export type LintRules<N extends string> = string extends N
+  ? Readonly<Record<string, RuleSetting>>
+  : [N] extends [never]
+    ? Readonly<Record<string, never>>
+    : { readonly [K in `${N}/${string}`]?: RuleSetting };
+
+/** One `lint.rules` entry: rules of a registered plugin turned on, for some files or all. `N` is the plugin names. */
+export type LintRuleEntry<N extends string = string> = {
+  /**
+   * Globs of the files the rules cover, relative to the repo root, like `"src/**"`. Every file when omitted.
+   *
+   * @default undefined
+   */
+  files?: NonEmpty<string> | undefined;
+  /**
+   * The rules to turn on, each `"<plugin>/<rule>"` with a plugin from `lint.plugins`: `"error"`, or `["error",
+   * options]` for a rule that takes options. Turn a rule off with `lint.skip`.
+   */
+  rules: LintRules<NoInfer<N>>;
+};
+
+/** `lint`: exceptions and extra settings for `bun repo lint`. `N` is the names of `plugins`. */
+export type LintConfig<N extends string = string> = {
   /**
    * Rules turned off for named files, each with a reason. Lint, `bun repo check` and the commit hook all honor them.
    *
    * @default []
    */
   skip?: readonly LintSkipEntry[] | undefined;
+  /**
+   * Your own oxlint plugins, by name to the repo-relative `.js`, `.mjs` or `.ts` file that default-exports each. The
+   * name is lowercase kebab-case and is the prefix of its rules; oxlint's own plugin names and `repo`, `tailwindcss`,
+   * `stylelint`, `clippy` and `rust` are taken. Turn its rules on with `rules`.
+   *
+   * @default {}
+   * @example plugins: { app: "lint/app.js" }
+   */
+  plugins?: ({ readonly [K in N]: string } & Taken<StockPlugin>) | undefined;
+  /**
+   * Rules of your `plugins` to turn on at error severity, for the files each entry's globs match or for every file.
+   * A key is `"<plugin>/<rule>"`; a value is `"error"` or `["error", options]`.
+   *
+   * @default []
+   * @example rules: [{ files: ["src/**"], rules: { "app/no-x": "error", "app/max-y": ["error", { max: 3 }] } }]
+   */
+  rules?: readonly LintRuleEntry<N>[] | undefined;
   /**
    * Which layer each workspace package sits on, and which layers each may import. The `repo/boundaries` rule fails
    * an import outside them. Off when omitted.

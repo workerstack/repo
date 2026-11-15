@@ -42,7 +42,9 @@ const CRATE = { "Cargo.toml": "[package]\n", "src/lib.rs": "pub fn f() {}\n", "s
 it("checkLintSkips matches a .rs glob and reports the clippy and source-rule hits it turns off", async () => {
   const ws = checkout(CRATE);
   const skips = [skip(["src/lib.rs"], ["clippy/unwrap_used", "repo/rust-block-comment"])];
-  expect(await checkLintSkips(ws, { skip: skips }, { scripts: [HIT, SCRIPT_HIT] })).toStrictEqual({
+  expect(
+    await checkLintSkips(ws, { plugins: {}, rules: [], skip: skips }, { scripts: [HIT, SCRIPT_HIT] }),
+  ).toStrictEqual({
     problems: [],
     report: [
       `skip clippy/unwrap_used in src/lib.rs: 1 hit (${REASON})`,
@@ -55,7 +57,7 @@ it("checkLintSkips matches a .rs glob and reports the clippy and source-rule hit
 it("checkLintSkips matches a glob over every .rs file, and fails a misspelled Rust rule as having no hit", async () => {
   const ws = checkout(CRATE);
   const skips = [skip(["**/*.rs"], ["clippy/unwrap_used"]), skip(["src/main.rs"], ["clippy/unwrap_usd"])];
-  expect(await checkLintSkips(ws, { skip: skips }, { scripts: [HIT] })).toStrictEqual({
+  expect(await checkLintSkips(ws, { plugins: {}, rules: [], skip: skips }, { scripts: [HIT] })).toStrictEqual({
     problems: ['lint.skip[1]: clippy/unwrap_usd has no hit in "src/main.rs"; delete it from the entry'],
     report: [`skip clippy/unwrap_used in **/*.rs: 1 hit (${REASON})`, "skips: clippy/unwrap_used 1"],
   });
@@ -64,7 +66,11 @@ it("checkLintSkips matches a glob over every .rs file, and fails a misspelled Ru
 it("checkLintSkips matches no .rs file without a Cargo.toml", async () => {
   const ws = checkout({ "src/lib.rs": "pub fn f() {}\n" });
   expect(
-    await checkLintSkips(ws, { skip: [skip(["src/lib.rs"], ["clippy/unwrap_used"])] }, { scripts: [HIT] }),
+    await checkLintSkips(
+      ws,
+      { plugins: {}, rules: [], skip: [skip(["src/lib.rs"], ["clippy/unwrap_used"])] },
+      { scripts: [HIT] },
+    ),
   ).toStrictEqual({
     problems: ['lint.skip[0]: "src/lib.rs" matches no file; fix the path or delete the entry'],
     report: [],
@@ -73,6 +79,12 @@ it("checkLintSkips matches no .rs file without a Cargo.toml", async () => {
 
 it("checkLintSkips reports why the Rust files could not be listed", async () => {
   const ws = untracked(CRATE);
-  const checked = await checkLintSkips(ws, { skip: [skip(["src/lib.rs"], ["clippy/unwrap_used"])] }, { scripts: [] });
+
+  const checked = await checkLintSkips(
+    ws,
+    { plugins: {}, rules: [], skip: [skip(["src/lib.rs"], ["clippy/unwrap_used"])] },
+    { scripts: [] },
+  );
+
   expect(checked.problems).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
 });

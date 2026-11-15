@@ -63,7 +63,7 @@ it("writes the oxlint config of the workspace: the repo plugin, and a package bi
 it("writes each lint.skip entry as the last override, and refuses a rule the config never runs with no output", () => {
   const reason = "the parsed config cache lives for the process";
   const live = { files: ["src/cache.ts"], reason, rules: ["repo/no-module-state"] };
-  const { outputs, errors } = standards(context(["standards"], "app", { skip: [live] }), []);
+  const { outputs, errors } = standards(context(["standards"], "app", { plugins: {}, rules: [], skip: [live] }), []);
   expect(errors).toStrictEqual([]);
 
   const config = contentOf(outputs, ".oxlintrc.jsonc") /* the oxlint config always has overrides */ as {
@@ -73,7 +73,7 @@ it("writes each lint.skip entry as the last override, and refuses a rule the con
   expect(config.overrides.at(-1)).toStrictEqual({ files: ["src/cache.ts"], rules: { "repo/no-module-state": "off" } });
 
   const typo = { ...live, rules: ["repo/no-modul-state"] };
-  expect(standards(context(["standards"], "app", { skip: [typo] }), [])).toStrictEqual({
+  expect(standards(context(["standards"], "app", { plugins: {}, rules: [], skip: [typo] }), [])).toStrictEqual({
     errors: ['repo.config.ts: lint.skip[0].rules: "repo/no-modul-state" is not a rule the generated config runs'],
     outputs: [],
   });
@@ -92,7 +92,7 @@ it(
       sortPackageJson: true,
       sortTailwindcss: {},
     });
-    const lint = { skip: [], tailwind: { entryPoint: "src/app.css" } };
+    const lint = { plugins: {}, rules: [], skip: [], tailwind: { entryPoint: "src/app.css" } };
     const sorted = standards(context(["standards"], "app", lint), []).outputs;
     expect(contentOf(sorted, ".oxfmtrc.jsonc")).toMatchObject({ sortTailwindcss: { stylesheet: "src/app.css" } });
   },

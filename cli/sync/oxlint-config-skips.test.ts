@@ -12,7 +12,7 @@ const REASON = "the parsed config cache lives for the process";
 const APP: Workspace = { manifest: { bin: "./bin/app.ts", name: "app" }, packages: [], root: "/repo" };
 
 function configOf(skips: readonly LintSkip[] = []): Config {
-  const built = oxlintConfig(APP, { skip: skips });
+  const built = oxlintConfig(APP, { plugins: {}, rules: [], skip: skips });
 
   if (!built.ok) throw new Error(built.errors.join("\n"));
 
@@ -55,7 +55,7 @@ it("oxlintConfig accepts a Stylelint rule's skip and writes no override for it",
 
 it("oxlintConfig refuses a Stylelint skip name that is not a lowercase rule name", () => {
   const skips = [{ files: ["src/legacy.css"], reason: REASON, rules: ["stylelint/Bad Name"] }];
-  expect(oxlintConfig(APP, { skip: skips })).toStrictEqual({
+  expect(oxlintConfig(APP, { plugins: {}, rules: [], skip: skips })).toStrictEqual({
     errors: ['repo.config.ts: lint.skip[0].rules: "stylelint/Bad Name" is not a rule the generated config runs'],
     ok: false,
   });

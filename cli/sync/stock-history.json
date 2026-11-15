@@ -5496,6 +5496,7 @@
     "b34bd5b75d7c45b9",
     "e16b53ff705a631d"
   ],
+  "cli/scripts/lint-consumer-plugin.test.ts": ["2e1b2772f0a8054b"],
   "cli/scripts/lint-jsonc.test.ts": [
     "038d9baa86e55b48",
     "03acaefd9b8db336",
@@ -5546,6 +5547,7 @@
     "23612b6f293de8bd",
     "2563079d8a559123",
     "2950b21d4d02cf09",
+    "2e4378410b211be0",
     "337e4d3746b4593c",
     "3869db5a319f2715",
     "3cb5ff2fcdf361ce",
@@ -5623,13 +5625,15 @@
     "6fb0b1c1e76a3b1a",
     "8d855e38ecd3cbea",
     "986d209d2ad008e1",
+    "c26a8c0ee4b9a443",
     "cb134482799b8002"
   ],
   "cli/scripts/lint-skips-tailwind.test.ts": [
     "4f9eeda3dfa0e18f",
     "51b9a345fd579d94",
     "bcce9ec30140fdec",
-    "e460437872a56709"
+    "e460437872a56709",
+    "ec0eba82909e0a04"
   ],
   "cli/scripts/lint-skips.test.ts": [
     "09ca3d55f3e89062",
@@ -5643,6 +5647,7 @@
     "58cc44e359798426",
     "95dd5c34d7d52900",
     "a666668c9998ec78",
+    "b64070814b5a90c8",
     "c776d145468bc63d",
     "f4750ded2d4fe73c",
     "ffec30ce8a9bf465"
@@ -8855,6 +8860,7 @@
   "references/exports.md": [
     "040cef985f3738a6",
     "0b6d34d5dc341412",
+    "1053bf9a3ea9de13",
     "118f75027b557f07",
     "1e82ef046ca82fa0",
     "28c733238c8ebeff",

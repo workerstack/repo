@@ -41,6 +41,9 @@ const ON_CATEGORIES: readonly string[] = ["correctness", "suspicious"];
 const categories: Readonly<Record<string, string>> = catalog;
 const OFF_SIDE_EFFECTS = { "repo/no-module-side-effects": "off" };
 const OFF_DEFAULT_EXPORT = { "import/no-default-export": "off" };
+
+/** oxlint loads a plugin file's default export, and an index file may hold it. */
+const OFF_PLUGIN_ENTRY = { ...OFF_DEFAULT_EXPORT, "repo/index-file": "off" };
 const REPO_PLUGIN = { name: "repo", specifier: "@workerstack/repo/lint" };
 
 /** Through this package, never the bare name: an isolated install does not hoist our dependencies to the root. */
@@ -91,7 +94,7 @@ function filesOf(workspace: Workspace, pick: (manifest: PackageJson) => (Json | 
 function packageOverrides(workspace: Workspace): { files: string[]; rules: Record<string, string> }[] {
   const overrides = [
     { files: filesOf(workspace, (manifest) => binsOf(manifest.bin)), rules: OFF_SIDE_EFFECTS },
-    { files: filesOf(workspace, lintExportOf), rules: { ...OFF_DEFAULT_EXPORT, "repo/index-file": "off" } },
+    { files: filesOf(workspace, lintExportOf), rules: OFF_PLUGIN_ENTRY },
   ];
 
   return overrides.filter((override) => override.files.length > 0);
@@ -113,13 +116,37 @@ function tailwindParts(lint: ResolvedLint) {
   return { plugins: [TAILWIND_PLUGIN], rules: TAILWIND_RULES, settings: { settings: { tailwindcss: { entryPoint } } } };
 }
 
-/** Every rule key the generated config sets to `error`, in the base, the tailwindcss rules or the test override. */
+/**
+ * The consumer's plugins, loaded from their files beside the config, and its rules: an entry with no `files` is a
+ * top-level rule, one with `files` an override. oxlint loads a plugin file's default export, so its files may
+ * default-export and be index files, as a package's plugin entry may.
+ */
+function consumerParts(lint: ResolvedLint) {
+  const entries = Object.values(lint.plugins);
+  const plugins = Object.entries(lint.plugins).map(([name, file]) => ({ name, specifier: `./${file}` }));
+  const everywhere = lint.rules.filter((entry) => entry.files === undefined);
+  const scoped = lint.rules.flatMap(({ files, rules }) => (files === undefined ? [] : [{ files, rules }]));
+
+  return {
+    overrides: [...(entries.length === 0 ? [] : [{ files: entries, rules: OFF_PLUGIN_ENTRY }]), ...scoped],
+    plugins,
+    rules: Object.fromEntries(everywhere.flatMap((entry) => Object.entries(entry.rules))),
+  };
+}
+
+/**
+ * Every rule key the generated config sets to `error`: the base, the tailwindcss and consumer rules, the test
+ * override.
+ */
 function runRules(lint: ResolvedLint): Set<string> {
-  return new Set(
-    [...Object.entries(RULES), ...Object.entries(tailwindParts(lint).rules), ...Object.entries(TEST_RULES)].flatMap(
+  const consumer = lint.rules.flatMap((entry) => Object.keys(entry.rules));
+
+  return new Set([
+    ...consumer,
+    ...[...Object.entries(RULES), ...Object.entries(tailwindParts(lint).rules), ...Object.entries(TEST_RULES)].flatMap(
       ([rule, setting]) => (isOn(setting) ? [rule] : []),
     ),
-  );
+  ]);
 }
 
 /**
@@ -163,7 +190,10 @@ function skipOverrides(skips: readonly LintSkip[]): { files: readonly string[]; 
   });
 }
 
-/** The overrides, in order: tests, configs, eval files, the workerstack config, the package and `lint.skip` ones. */
+/**
+ * The overrides, in order: tests, configs, eval files, the workerstack config, the package, `lint.rules` and
+ * `lint.skip` ones.
+ */
 function overridesOf(workspace: Workspace, lint: ResolvedLint) {
   return [
     { files: TESTS, rules: { ...OFF_SIDE_EFFECTS, ...TEST_RULES } },
@@ -174,6 +204,7 @@ function overridesOf(workspace: Workspace, lint: ResolvedLint) {
     // `ci.checks` run in key order, one after another, so sorting the keys would reorder a consumer's checks.
     { files: [REPO_CONFIG], rules: { "eslint/sort-keys": "off" } },
     ...packageOverrides(workspace),
+    ...consumerParts(lint).overrides,
     ...skipOverrides(lint.skip),
   ];
 }
@@ -183,7 +214,10 @@ function overridesOf(workspace: Workspace, lint: ResolvedLint) {
  * `lint.skip` entry is an override written last, so it turns off only its rules for only its files, and
  * `lint.boundaries`, checked against the workspace, is the options of `repo/boundaries`. `rust` is whether the root has
  * a Cargo.toml, which is what lets a skip name a Rust rule. `lint.tailwind`, the entry sync found or was given, adds
- * the tailwindcss plugin with the entry as its settings and its four class rules.
+ * the tailwindcss plugin with the entry as its settings and its four class rules. `lint.plugins` load after them, from
+ * `./<file>` beside the config, and each `lint.rules` entry is top-level rules (no `files`) or an override written
+ * after the stock and package ones and before the skips, so a skip can turn a consumer rule off; a skip may name any
+ * rule an entry turns on.
  */
 export function oxlintConfig(
   workspace: Workspace,
@@ -194,13 +228,14 @@ export function oxlintConfig(
 
   if (errors.length > 0) return { errors, ok: false };
   const tailwind = tailwindParts(lint);
+  const consumer = consumerParts(lint);
 
   // The config is written in this key order, so a blank line starts each run of keys that is already sorted.
   const config = {
     plugins: ["eslint", "typescript", "unicorn", "oxc", "import", "vitest"],
 
     // A specifier, not a path: oxlint resolves it from the config's node_modules, or from NODE_PATH (`repo lint`).
-    jsPlugins: [REPO_PLUGIN, ...tailwind.plugins],
+    jsPlugins: [REPO_PLUGIN, ...tailwind.plugins, ...consumer.plugins],
 
     categories: Object.fromEntries(
       CATEGORIES.map((category) => [category, ON_CATEGORIES.includes(category) ? "error" : "off"]),
@@ -212,6 +247,7 @@ export function oxlintConfig(
       ...RULES,
       ...boundariesSetting(lint.boundaries),
       ...tailwind.rules,
+      ...consumer.rules,
       ...Object.fromEntries(Object.keys(OFF_RULES).map((rule) => [rule, "off"])),
     },
 

@@ -151,7 +151,7 @@ What a repo imports from `@workerstack/repo`. `bun repo docs --check` type-check
 
 `repo.config.ts` at the root default-exports `defineConfig` from `@workerstack/repo`; `bun repo init` writes it. `workflow` says how changes reach the default branch: `"worktree"` (the default), `"pull-request"` or `"main"`; `workflow.md` says what each mode does.
 
-Hover any key in `defineConfig({ ... })` to see what it does, the values it takes, its default and an example, at every depth. A section whose pack is off is a type error that names the pack to add, like `add "release" to packs to set this` on `nightly`. The types also refuse what the schema would refuse at load: an empty `ci.checks` command, a check named after a built-in one, an empty `lint.skip` list of files or rules, a `knip.ignore` entry that names two of `file`, `dependency` and `binary`, and a turbo task named `typecheck` or `test`.
+Hover any key in `defineConfig({ ... })` to see what it does, the values it takes, its default and an example, at every depth. A section whose pack is off is a type error that names the pack to add, like `add "release" to packs to set this` on `nightly`. The types also refuse what the schema would refuse at load: an empty `ci.checks` command, a check named after a built-in one, an empty `lint.skip` list of files or rules, a `lint.plugins` name that is a stock plugin, a `lint.rules` key whose plugin is not in `lint.plugins`, a `knip.ignore` entry that names two of `file`, `dependency` and `binary`, and a turbo task named `typecheck` or `test`.
 
 ```ts
 import { defineConfig } from "@workerstack/repo";
@@ -165,6 +165,8 @@ export default defineConfig({
       allow: { app: ["ui", "lib"], ui: ["lib"], lib: [] },
     },
     tailwind: { entryPoint: "apps/web/src/app.css" },
+    plugins: { app: "lint/app.js" },
+    rules: [{ files: ["src/**"], rules: { "app/no-x": "error" } }],
   },
 });
 ```
@@ -179,6 +181,44 @@ import plugin from "@workerstack/repo/lint";
 const names: string[] = Object.keys(plugin.rules);
 console.log(`${plugin.meta.name}: ${names.length} rules`);
 ```
+
+### Your own lint rules
+
+Under the `standards` pack, a repo runs its own oxlint JS plugins beside the stock rules. `lint.plugins` maps a name to a repo-relative `.js`, `.mjs` or `.ts` file that default-exports a plugin (`{ meta: { name }, rules: {} }`). `lint.rules` turns its rules on: each entry is `{ files?, rules }`, and each rule is `"error"` or `["error", options]`. An entry with no `files` applies everywhere.
+
+```ts
+import { defineConfig } from "@workerstack/repo";
+
+export default defineConfig({
+  packs: ["standards"],
+  lint: {
+    plugins: { app: "lint/app.js" },
+    rules: [
+      { files: ["src/**"], rules: { "app/no-x": "error" } },
+      { rules: { "app/max-y": ["error", { max: 3 }] } },
+    ],
+  },
+});
+```
+
+`bun repo sync` adds `{ "name": "app", "specifier": "./lint/app.js" }` to `jsPlugins` in `.oxlintrc.jsonc`, after the stock plugins. Rules with no `files` go in `rules`, the others in `overrides`. The file stays untracked, and `bun repo sync --check` reports drift when the key changes. The plugin's key is its name in the config, so its `meta.name` does not matter. A hit prints as `app(no-x)` and counts in `bun repo lint`, `bun repo check`, `bun repo turn` and `.repo/lint-baseline.json` like a stock hit. A `lint.skip` entry can name `app/no-x`. The plugin file may default-export, and knip counts it as used.
+
+This only adds rules. Turn a stock rule off with `lint.skip`. Config load refuses, one line each:
+
+```
+repo.config.ts: lint.plugins.vitest: is a stock plugin name; pick another, like "app"
+repo.config.ts: lint.plugins.App: must be a lowercase kebab-case name, like "app"
+repo.config.ts: lint.plugins.app: must be a repo-relative path to a .js, .mjs or .ts file, like "lint/app.js"
+repo.config.ts: lint.plugins.app: lint/app.js is no file
+repo.config.ts: lint.plugins.app: lint/app.js does not default-export a plugin like { meta: { name }, rules: {} }
+repo.config.ts: lint.rules[0].rules: "other/x" names no plugin in lint.plugins
+repo.config.ts: lint.rules[0].rules: "app/nope" is not a rule of lint/app.js; it has no-x, max-y
+repo.config.ts: lint.rules[0].rules.app/no-x: must be "error" or ["error", options]; lint.skip turns rules off
+```
+
+The types in `defineConfig` refuse a stock name and a rule whose plugin is not listed. Only the load can see the file and what it exports. Load imports each plugin file, so a plugin that throws fails every command that reads the config, and the line names the file.
+
+There is no key for generated files. oxlint skips every path `.gitignore` ignores, so list generated output such as `**/_gen/` or `**/*.gen.ts` there.
 
 ### Stylelint
 

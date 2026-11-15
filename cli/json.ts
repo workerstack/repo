@@ -2,7 +2,16 @@
 import { z } from "zod";
 
 /** A value JSON.parse or a YAML parse returns: a primitive, an array of Json or an object of Json. */
-export type Json = string | number | boolean | null | Json[] | { [key: string]: Json };
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | Json[]
+  | {
+      /** Each key of a JSON object holds a Json. */
+      [key: string]: Json;
+    };
 
 /**
  * A value a JSON writer takes: Json with readonly arrays and objects, and an object value may be undefined, which

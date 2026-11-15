@@ -124,3 +124,32 @@ describe("defineConfig on a value the schema refuses", () => {
     expect(defineConfig({}).packs).toBeUndefined();
   });
 });
+
+describe("defineConfig with consumer lint plugins", () => {
+  it("takes a rule of a registered plugin and refuses the rest", () => {
+    const plugins = { app: "lint/app.js" };
+
+    const ok = defineConfig({
+      lint: {
+        plugins,
+        rules: [{ files: ["src/**"], rules: { "app/max-y": ["error", { max: 3 }], "app/no-x": "error" } }],
+      },
+    });
+
+    expect(ok.lint?.plugins).toStrictEqual(plugins);
+    // @ts-expect-error other is no registered plugin
+    defineConfig({ lint: { plugins, rules: [{ rules: { "other/x": "error" } }] } });
+    // @ts-expect-error no plugin is registered, so no rule key names one
+    defineConfig({ lint: { rules: [{ rules: { "app/x": "error" } }] } });
+    // @ts-expect-error vitest is a stock plugin name
+    defineConfig({ lint: { plugins: { vitest: "x.js" } } });
+    // @ts-expect-error a rule is only ever on
+    defineConfig({ lint: { plugins, rules: [{ rules: { "app/x": "off" } }] } });
+    // @ts-expect-error a rule is only ever on
+    defineConfig({ lint: { plugins, rules: [{ rules: { "app/x": ["warn"] } }] } });
+    // @ts-expect-error an entry needs a rule
+    defineConfig({ lint: { plugins, rules: [{ files: ["a.ts"] }] } });
+    // @ts-expect-error files needs a glob
+    defineConfig({ lint: { plugins, rules: [{ files: [], rules: { "app/x": "error" } }] } });
+  });
+});

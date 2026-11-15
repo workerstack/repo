@@ -15,7 +15,7 @@ function workspace(manifest: PackageJson, packages: Workspace["packages"] = []):
 }
 
 function configOf(ws: Workspace, skips: readonly LintSkip[] = []): Json {
-  const built = oxlintConfig(ws, { skip: skips });
+  const built = oxlintConfig(ws, { plugins: {}, rules: [], skip: skips });
 
   if (!built.ok) throw new Error(built.errors.join("\n"));
 

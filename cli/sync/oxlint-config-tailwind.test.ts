@@ -15,7 +15,7 @@ const ROOT: Workspace = {
   root: "/repo",
 };
 
-const ENTRY: ResolvedLint = { skip: [], tailwind: { entryPoint: "src/app.css" } };
+const ENTRY: ResolvedLint = { plugins: {}, rules: [], skip: [], tailwind: { entryPoint: "src/app.css" } };
 const REPO_PLUGIN = { name: "repo", specifier: "@workerstack/repo/lint" };
 
 type Written = { jsPlugins: unknown; overrides: unknown[]; rules: JsonObject; settings?: unknown };
@@ -49,14 +49,14 @@ it("an entry adds the tailwindcss plugin through this package, its entry as sett
 });
 
 it("without an entry the config has no tailwindcss plugin, settings or rule", () => {
-  const config = written({ skip: [] });
+  const config = written({ plugins: {}, rules: [], skip: [] });
   expect(config.jsPlugins).toStrictEqual([REPO_PLUGIN]);
   expect(config).not.toHaveProperty("settings");
   expect(tailwindRules(config)).toStrictEqual({});
 });
 
 it("the plugin entries a package exports, ./lint and ./tailwind, may default-export and sit outside an index", () => {
-  expect(written({ skip: [] }).overrides).toContainEqual({
+  expect(written({ plugins: {}, rules: [], skip: [] }).overrides).toContainEqual({
     files: ["cli/lint/index.ts", "cli/lint/tailwind-plugin.ts"],
     rules: { "import/no-default-export": "off", "repo/index-file": "off" },
   });
@@ -73,7 +73,7 @@ it("a skip may name a tailwindcss rule only when an entry turns the rules on", (
     files: ["src/legacy.tsx"],
     rules: { "tailwindcss/no-hardcoded-colors": "off" },
   });
-  expect(oxlintConfig(ROOT, { skip: [skip] })).toStrictEqual({
+  expect(oxlintConfig(ROOT, { plugins: {}, rules: [], skip: [skip] })).toStrictEqual({
     errors: [
       'repo.config.ts: lint.skip[0].rules: "tailwindcss/no-hardcoded-colors" ' +
         "is not a rule the generated config runs",

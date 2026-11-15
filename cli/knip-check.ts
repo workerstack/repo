@@ -140,12 +140,12 @@ function tail(stderr: string): string {
 }
 
 /** Runs knip on the unignored config, written for the run only. */
-async function runUnignored(workspace: Workspace, run: KnipRun): Promise<Captured> {
+async function runUnignored(workspace: Workspace, run: KnipRun, plugins: readonly string[]): Promise<Captured> {
   const name = unignoredPath();
   const file = path.join(workspace.root, name);
 
   try {
-    fs.writeFileSync(file, knipConfig(workspace, []));
+    fs.writeFileSync(file, knipConfig(workspace, [], plugins));
 
     return await run(["--config", name, "--no-exit-code", "--reporter", "json"], workspace.root);
   } finally {
@@ -176,18 +176,23 @@ function ignoreLines(ignores: readonly KnipIgnore[], hits: readonly number[], st
   return { report: used.length === 0 ? [] : [line], unused };
 }
 
+/** What one knip check runs on: the workspace, its `ignores`, the `run` and the `plugins` files of `lint.plugins`. */
+type KnipInput = {
+  workspace: Workspace;
+  ignores: readonly KnipIgnore[];
+  run: KnipRun;
+  plugins: readonly string[];
+};
+
 /**
- * Every issue knip finds in `workspace` is a problem unless an entry of `ignores` covers it. Each covering entry is
- * reported with its reason; one that matches nothing, before or after the run, is a problem.
+ * Every issue knip finds in the workspace is a problem unless an entry of `ignores` covers it. Each covering entry is
+ * reported with its reason; one that matches nothing, before or after the run, is a problem. `plugins` are entries of
+ * the run, as oxlint loads them where knip cannot see.
  */
-export async function checkKnip(
-  workspace: Workspace,
-  ignores: readonly KnipIgnore[],
-  run: KnipRun,
-): Promise<KnipCheck> {
+export async function checkKnip({ workspace, ignores, run, plugins }: KnipInput): Promise<KnipCheck> {
   const before = ignores.map((ignore) => staleBefore(workspace, ignore));
   const stale = before.flatMap((why, i) => (why === null ? [] : [`knip.ignore[${i}]: ${why}`]));
-  const ran = await runUnignored(workspace, run);
+  const ran = await runUnignored(workspace, run, plugins);
   const issues = issuesOf(ran.stdout);
 
   if (ran.code === EXIT_BAD_CONFIG || issues === null)
@@ -205,5 +210,12 @@ export async function checkKnip(
 export async function checkKnipAt(cwd: string, deps: KnipDeps = {}): Promise<KnipCheck> {
   const found = await standardsWorkspace(cwd);
 
-  return found === null ? NONE : await checkKnip(found.workspace, found.config.knip.ignore, deps.run ?? runKnip);
+  if (found === null) return NONE;
+
+  return await checkKnip({
+    ignores: found.config.knip.ignore,
+    plugins: Object.values(found.config.lint.plugins),
+    run: deps.run ?? runKnip,
+    workspace: found.workspace,
+  });
 }

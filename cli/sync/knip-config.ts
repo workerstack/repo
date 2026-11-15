@@ -104,10 +104,28 @@ function workspaceConfig(root: string, pkg: WorkspacePackage, extraEntry: string
   };
 }
 
+/** The workspace dir a repo-relative `file` lies in: the longest package dir that prefixes it, else the root. */
+function holderOf(workspace: Workspace, file: string): string {
+  const dirs = workspace.packages.map((pkg) => pkg.dir).filter((dir) => file.startsWith(`${dir}/`));
+
+  return dirs.toSorted((a, b) => b.length - a.length)[0] ?? ROOT;
+}
+
+/** The entries `plugins` (repo-relative files) add to the workspace at `dir`, each relative to that dir. */
+function pluginEntries(workspace: Workspace, dir: string, plugins: readonly string[]): string[] {
+  return plugins.filter((file) => holderOf(workspace, file) === dir).map((file) => path.posix.relative(dir, file));
+}
+
 /** The root workspace: its own settings and the `ignores`, each as the list knip takes for its kind. */
-function rootConfig(workspace: Workspace, ignores: readonly KnipIgnore[]): WorkspaceConfig {
+function rootConfig(workspace: Workspace, ignores: readonly KnipIgnore[], plugins: readonly string[]): WorkspaceConfig {
   const evals = fs.existsSync(path.join(workspace.root, EVALS_DIR)) ? [EVAL_ENTRY] : [];
-  const base = workspaceConfig(workspace.root, { dir: ROOT, manifest: workspace.manifest }, [CONFIG_FILE, ...evals]);
+
+  const base = workspaceConfig(workspace.root, { dir: ROOT, manifest: workspace.manifest }, [
+    CONFIG_FILE,
+    ...evals,
+    ...pluginEntries(workspace, ROOT, plugins),
+  ]);
+
   const files = ignores.flatMap((ignore) => ("file" in ignore ? [ignore.file] : []));
   const dependencies = ignores.flatMap((ignore) => ("dependency" in ignore ? [ignore.dependency] : []));
   const binaries = ignores.flatMap((ignore) => ("binary" in ignore ? [ignore.binary] : []));
@@ -125,15 +143,26 @@ function rootConfig(workspace: Workspace, ignores: readonly KnipIgnore[]): Works
  * The knip config of a workspace: every rule an error, each package dir a workspace of knip's default entries and its
  * own (the root also `repo.config.ts`, and every `evals/<name>/eval.ts` when it has an `evals/` dir), the
  * vitest configs present read by knip's vitest plugin, fixtures ignored, a workspace's own bins not reported, and the
- * root carrying `ignores`. `repo check` passes none for its ignore-free run.
+ * root carrying `ignores`. `repo check` passes no ignores for its ignore-free run.
+ * Each of `plugins`, the repo-relative files
+ * of `lint.plugins`, is an entry of the workspace holding it, relative to that workspace's dir.
  */
-export function knipConfig(workspace: Workspace, ignores: readonly KnipIgnore[]): string {
+export function knipConfig(
+  workspace: Workspace,
+  ignores: readonly KnipIgnore[],
+  plugins: readonly string[] = [],
+): string {
   const config = {
     $schema: KNIP_SCHEMA_URL,
     rules: Object.fromEntries(RULES.map((rule) => [rule, "error"])),
     workspaces: {
-      [ROOT]: rootConfig(workspace, ignores),
-      ...Object.fromEntries(workspace.packages.map((pkg) => [pkg.dir, workspaceConfig(workspace.root, pkg, [])])),
+      [ROOT]: rootConfig(workspace, ignores, plugins),
+      ...Object.fromEntries(
+        workspace.packages.map((pkg) => [
+          pkg.dir,
+          workspaceConfig(workspace.root, pkg, pluginEntries(workspace, pkg.dir, plugins)),
+        ]),
+      ),
     },
   };
 

@@ -77,7 +77,10 @@ export function standards(ctx: SyncContext, outputs: readonly Output[]): ReturnT
     errors: [],
     outputs: [
       untrackedFile(OXLINT_CONFIG_PATH, oxlint.value),
-      untrackedFile(KNIP_CONFIG_PATH, knipConfig(ctx.workspace, ctx.config.knip.ignore)),
+      untrackedFile(
+        KNIP_CONFIG_PATH,
+        knipConfig(ctx.workspace, ctx.config.knip.ignore, Object.values(ctx.config.lint.plugins)),
+      ),
       untrackedFile(
         OXFMT_CONFIG_PATH,
         oxfmtConfig(

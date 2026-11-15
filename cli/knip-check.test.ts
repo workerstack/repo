@@ -11,7 +11,7 @@ import { knipConfig } from "./sync/knip-config.ts";
 afterEach(removeKnipRoots);
 
 async function run(issues: JsonObject[]) {
-  return await checkKnip(knipRoot({}), [], answering(report(...issues)));
+  return await checkKnip({ ignores: [], plugins: [], run: answering(report(...issues)), workspace: knipRoot({}) });
 }
 
 const item = { col: 1, line: 1, name: "x", pos: 0 };
@@ -64,14 +64,33 @@ describe("a knip that did not report", () => {
   const tail = "run `bun repo sync` and check knip.jsonc";
 
   it("exit 2 is one problem naming the tail of its stderr", async () => {
-    const out = await checkKnip(knipRoot({}), [], answering("", 2, "a\nb\nc\nd\n"));
+    const out = await checkKnip({
+      ignores: [],
+      plugins: [],
+      run: answering("", 2, "a\nb\nc\nd\n"),
+      workspace: knipRoot({}),
+    });
+
     expect(out).toStrictEqual({ problems: [`knip: exited 2: b c d; ${tail}`], report: [] });
   });
 
   it("output that is not knip's json is one problem", async () => {
-    const out = await checkKnip(knipRoot({}), [], answering("not json", 0, "boom"));
+    const out = await checkKnip({
+      ignores: [],
+      plugins: [],
+      run: answering("not json", 0, "boom"),
+      workspace: knipRoot({}),
+    });
+
     expect(out).toStrictEqual({ problems: [`knip: exited 0: boom; ${tail}`], report: [] });
-    const counted = await checkKnip(knipRoot({}), [], answering('{"issues":3}'));
+
+    const counted = await checkKnip({
+      ignores: [],
+      plugins: [],
+      run: answering('{"issues":3}'),
+      workspace: knipRoot({}),
+    });
+
     expect(counted.problems).toHaveLength(1);
   });
 });
@@ -82,12 +101,17 @@ describe("the unignored config", () => {
     const name = `knip.unignored-${process.pid}.jsonc`;
     let seen = "";
 
-    const out = await checkKnip(ws, [{ file: "gone.ts", reason: "r" }], (args, cwd) => {
-      seen = fs.readFileSync(path.join(ws.root, name), "utf8");
-      expect(args.slice(-5)).toStrictEqual(["--config", name, "--no-exit-code", "--reporter", "json"]);
-      expect(cwd).toBe(ws.root);
+    const out = await checkKnip({
+      ignores: [{ file: "gone.ts", reason: "r" }],
+      plugins: [],
+      run: (args, cwd) => {
+        seen = fs.readFileSync(path.join(ws.root, name), "utf8");
+        expect(args.slice(-5)).toStrictEqual(["--config", name, "--no-exit-code", "--reporter", "json"]);
+        expect(cwd).toBe(ws.root);
 
-      return Promise.resolve({ code: 0, stderr: "", stdout: report() });
+        return Promise.resolve({ code: 0, stderr: "", stdout: report() });
+      },
+      workspace: ws,
     });
 
     expect(seen).toBe(knipConfig(ws, []));
@@ -97,7 +121,7 @@ describe("the unignored config", () => {
 
   it("is removed when the runner throws", async () => {
     const ws = knipRoot({});
-    await expect(checkKnip(ws, [], boom)).rejects.toThrow("spawn failed");
+    await expect(checkKnip({ ignores: [], plugins: [], run: boom, workspace: ws })).rejects.toThrow("spawn failed");
     expect(fs.readdirSync(ws.root)).toStrictEqual(["package.json"]);
   });
 });

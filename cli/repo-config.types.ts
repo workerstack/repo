@@ -18,10 +18,10 @@ import type { Workflow } from "./workflow.ts";
 export type DefaultPack = (typeof DEFAULT_PACKS)[number];
 
 /**
- * What repo.config.ts default-exports. `P` is the packs it turns on; with no argument every section is allowed. Hover
- * any key in the editor for what it does, its values, its default and an example.
+ * What repo.config.ts default-exports. `P` is the packs it turns on; with no argument every section is allowed. `N` is
+ * the names of `lint.plugins`. Hover any key in the editor for what it does, its values, its default and an example.
  */
-export type RepoConfig<P extends Pack = Pack> = {
+export type RepoConfig<P extends Pack = Pack, N extends string = string> = {
   /**
    * The feature packs to turn on. `"agents"`: agent rules, skills and hooks. `"standards"`: format, lint, typecheck,
    * the commit hooks and `bun repo check`. `"docs"`: the docs checks. `"release"`: versioning, CHANGELOG, publish
@@ -81,11 +81,11 @@ export type RepoConfig<P extends Pack = Pack> = {
    */
   owner?: OwnerConfig | undefined;
   /**
-   * Exceptions and extra settings for `bun repo lint`. Needs the `standards` pack.
+   * Exceptions and extra settings for `bun repo lint`, and your own oxlint plugins. Needs the `standards` pack.
    *
    * @example lint: { skip: [{ files: ["src/legacy/**"], rules: ["eslint/max-lines"], reason: "split in issue 12" }] }
    */
-  lint?: Gated<P, "lint", LintConfig> | undefined;
+  lint?: Gated<P, "lint", LintConfig<N>> | undefined;
   /**
    * What the unused-code check may skip. Needs the `standards` pack.
    *

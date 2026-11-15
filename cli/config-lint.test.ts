@@ -45,7 +45,7 @@ it("lint.skip: Usage's config resolves to its skip entries", async () => {
       coverage: COVERAGE,
       knip: KNIP,
       link: undefined,
-      lint: { skip: [SKIP] },
+      lint: { plugins: {}, rules: [], skip: [SKIP] },
       nightly: NIGHTLY,
       owner: undefined,
       packs: ["agents", "standards"],
@@ -101,7 +101,7 @@ function tailwindConfig(entryPoint: Json): string {
 
 it("lint.tailwind: Usage's entryPoint resolves as written", async () => {
   expect(await loadConfig(repo(tailwindConfig("apps/web/src/app.css")))).toMatchObject({
-    config: { lint: { skip: [], tailwind: { entryPoint: "apps/web/src/app.css" } } },
+    config: { lint: { plugins: {}, rules: [], skip: [], tailwind: { entryPoint: "apps/web/src/app.css" } } },
     ok: true,
   });
 });

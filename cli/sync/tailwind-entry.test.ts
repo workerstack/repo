@@ -28,7 +28,12 @@ function checkout(files: Record<string, string>): string {
 /** The entry sync resolves in a checkout holding `files`, or its errors. */
 function entryOf(files: Record<string, string>, entryPoint?: string): string | string[] | undefined {
   const root = checkout(files);
-  const lint: ResolvedLint = entryPoint === undefined ? { skip: [] } : { skip: [], tailwind: { entryPoint } };
+
+  const lint: ResolvedLint =
+    entryPoint === undefined
+      ? { plugins: {}, rules: [], skip: [] }
+      : { plugins: {}, rules: [], skip: [], tailwind: { entryPoint } };
+
   const resolved = withTailwindEntry(root, lint);
 
   return resolved.ok ? resolved.lint.tailwind?.entryPoint : resolved.errors;
@@ -70,7 +75,10 @@ it("two sheets importing tailwindcss need lint.tailwind.entryPoint, which then p
 it("outside a git checkout no sheet is listed, so a sheet importing tailwindcss turns nothing on", () => {
   const root = tempDir("workerstack-tailwind-nogit-");
   write(root, { "src/app.css": IMPORT });
-  expect(withTailwindEntry(root, { skip: [] })).toStrictEqual({ lint: { skip: [] }, ok: true });
+  expect(withTailwindEntry(root, { plugins: {}, rules: [], skip: [] })).toStrictEqual({
+    lint: { plugins: {}, rules: [], skip: [] },
+    ok: true,
+  });
 });
 
 it("ten sheets importing tailwindcss are counted in digits", () => {
