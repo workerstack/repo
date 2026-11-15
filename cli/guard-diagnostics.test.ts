@@ -12,7 +12,8 @@ import {
   write,
 } from "./scripts/__fixtures__/turn-repo.ts";
 import type { Diagnostic } from "./scripts/lint-baseline.ts";
-import type { SharedSources } from "./ts-program.ts";
+import { type TsRun, withTsApi } from "./ts-api.ts";
+import { posix } from "./ts-program.ts";
 
 afterEach(() => {
   cleanTemps();
@@ -65,16 +66,25 @@ function test(imports: string, body: string): string {
   return `${VITEST}${imports}\n\nit("guards", () => {\n${body}\n});\n`;
 }
 
+/** What `check` gives on an API of its own over `root`. */
+function onApi<T>(root: string, check: (run: TsRun) => Promise<T>): Promise<T> {
+  return withTsApi(posix(root), check);
+}
+
 /** The guard hits of `files` planted beside a tsconfig.json, checking `checked` (all of them by default). */
-function guardsOf(files: Record<string, string>, checked: readonly string[] = Object.keys(files)): Diagnostic[] {
-  const found = guardDiagnostics(plant({ "tsconfig.json": TSCONFIG, ...files }), checked);
+async function guardsOf(
+  files: Record<string, string>,
+  checked: readonly string[] = Object.keys(files),
+): Promise<Diagnostic[]> {
+  const root = plant({ "tsconfig.json": TSCONFIG, ...files });
+  const found = await onApi(root, (run) => guardDiagnostics(run, root, checked));
 
   if (!found.ok) throw new Error(found.error.join("\n"));
 
   return found.value;
 }
 
-it("reports each exported guard no test asserts false, a true-only test included", { timeout: SLOW }, () => {
+it("reports each exported guard no test asserts false, a true-only test included", { timeout: SLOW }, async () => {
   const inferred = [
     'export const isCount = (value: unknown) => typeof value === "number";',
     'export const isWord = function (value: unknown): value is string { return typeof value === "string"; };',
@@ -86,7 +96,7 @@ it("reports each exported guard no test asserts false, a true-only test included
     '  expect(isUser({ name: "a" })).toBe(true);\n  expect(isName("a")).toBeTruthy();',
   );
 
-  expect(guardsOf({ "src/user.test.ts": only, "src/user.ts": `${USER}${inferred}` })).toStrictEqual([
+  expect(await guardsOf({ "src/user.test.ts": only, "src/user.ts": `${USER}${inferred}` })).toStrictEqual([
     untested("src/user.ts:3:17", "isUser"),
     untested("src/user.ts:7:14", "isName"),
     untested("src/user.ts:8:14", "isCount"),
@@ -94,13 +104,19 @@ it("reports each exported guard no test asserts false, a true-only test included
   ]);
 });
 
-it.each(["toBe(false)", "toBeFalsy()", "toEqual(false)"])("passes a guard asserted .%s", { timeout: SLOW }, (form) => {
-  const body = `  expect(isUser(1)).${form};\n  expect(isName(1)).${form};`;
-  const files = { "src/user.test.ts": test('import { isUser, isName } from "./user.ts";', body), "src/user.ts": USER };
-  expect(guardsOf(files)).toStrictEqual([]);
-});
+it.each(["toBe(false)", "toBeFalsy()", "toEqual(false)"])(
+  "passes a guard asserted .%s",
+  { timeout: SLOW },
+  async (form) => {
+    const body = `  expect(isUser(1)).${form};\n  expect(isName(1)).${form};`;
+    const tests = test('import { isUser, isName } from "./user.ts";', body);
+    const files = { "src/user.test.ts": tests, "src/user.ts": USER };
 
-it("follows a renamed import and a namespace import to the guard", { timeout: SLOW }, () => {
+    expect(await guardsOf(files)).toStrictEqual([]);
+  },
+);
+
+it("follows a renamed import and a namespace import to the guard", { timeout: SLOW }, async () => {
   const renamed = test(
     'import { isUser as looksLikeUser } from "./user.ts";',
     "  expect(looksLikeUser(1)).toBe(false);",
@@ -108,10 +124,10 @@ it("follows a renamed import and a namespace import to the guard", { timeout: SL
 
   const namespace = test('import * as user from "./user.ts";', "  expect(user.isName(1)).toBeFalsy();");
   const files = { "src/a.test.ts": renamed, "src/b.test.ts": namespace, "src/user.ts": USER };
-  expect(guardsOf(files, ["src/user.ts"])).toStrictEqual([]);
+  expect(await guardsOf(files, ["src/user.ts"])).toStrictEqual([]);
 });
 
-it("counts only a guard called as the argument of expect(…) itself", { timeout: SLOW }, () => {
+it("counts only a guard called as the argument of expect(…) itself", { timeout: SLOW }, async () => {
   const body = [
     "  const rejected = isUser(1);",
     "  expect(rejected).toBe(false);",
@@ -121,16 +137,17 @@ it("counts only a guard called as the argument of expect(…) itself", { timeout
     "  rejected.toBe(false);",
     "  expect(isUser(1)).toBe(false, 1);",
     "  expect(isName(1)).toBe(false);",
+    "  expect(isGone(1)).toBe(false);",
   ].join("\n");
 
   const files = { "src/user.test.ts": test('import { isUser, isName } from "./user.ts";', body), "src/user.ts": USER };
-  expect(guardsOf(files)).toStrictEqual([untested("src/user.ts:3:17", "isUser")]);
+  expect(await guardsOf(files)).toStrictEqual([untested("src/user.ts:3:17", "isUser")]);
 });
 
 it(
   "skips a guard that is not exported or has no name of its own, an assertion function and a plain boolean function",
   { timeout: SLOW },
-  () => {
+  async () => {
     const source = [
       "function isText(value: unknown): value is string {",
       '  return typeof value === "string";',
@@ -151,24 +168,28 @@ it(
       "",
     ].join("\n");
 
-    expect(guardsOf({ "src/text.ts": source })).toStrictEqual([]);
+    expect(await guardsOf({ "src/text.ts": source })).toStrictEqual([]);
   },
 );
 
-it("re-checks the guards of the sources a changed test imports, when only the test changed", { timeout: SLOW }, () => {
-  const trueOnly = test(
-    'import { isUser, isName } from "./user.ts";',
-    "  expect(isUser(1)).toBe(true);\n  expect(isName(1)).toBe(false);",
-  );
+it(
+  "re-checks the guards of the sources a changed test imports, when only the test changed",
+  { timeout: SLOW },
+  async () => {
+    const trueOnly = test(
+      'import { isUser, isName } from "./user.ts";',
+      "  expect(isUser(1)).toBe(true);\n  expect(isName(1)).toBe(false);",
+    );
 
-  const files = { "src/other.ts": OTHER, "src/user.test.ts": trueOnly, "src/user.ts": USER };
-  expect(guardsOf(files, ["src/user.test.ts"])).toStrictEqual([untested("src/user.ts:3:17", "isUser")]);
-});
+    const files = { "src/other.ts": OTHER, "src/user.test.ts": trueOnly, "src/user.ts": USER };
+    expect(await guardsOf(files, ["src/user.test.ts"])).toStrictEqual([untested("src/user.ts:3:17", "isUser")]);
+  },
+);
 
-it("reports a tsconfig.json typescript cannot read", () => {
+it("reports a tsconfig.json typescript cannot read by its root-relative path", { timeout: SLOW }, async () => {
   const root = plant({ "pkg/a.ts": USER, "pkg/tsconfig.json": "{" });
-  const found = guardDiagnostics(root, ["pkg/a.ts"]);
-  expect(found.ok ? [] : found.error).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
+  const found = await onApi(root, (run) => guardDiagnostics(run, root, ["pkg/a.ts"]));
+  expect(found).toStrictEqual({ error: ["pkg/tsconfig.json: '}' expected."], ok: false });
 });
 
 it("fails a turn that touches only a test and drops the last false assert", { timeout: TURN }, async () => {
@@ -191,17 +212,31 @@ it("fails a turn that touches only a test and drops the last false assert", { ti
   expect(result.code).toBe(1);
 });
 
-it("finds the same guards in sources the magic check of the run already parsed and bound", { timeout: SLOW }, () => {
-  const files = {
-    "src/other.ts": OTHER,
-    "src/user.test.ts": test('import { isUser } from "./user.ts";', ""),
-    "src/user.ts": USER,
-  };
+it(
+  "finds the same guards on an API the magic check of the run already read the sources on",
+  { timeout: SLOW },
+  async () => {
+    const tests = test('import { isUser } from "./user.ts";', "");
+    const files = { "src/other.ts": OTHER, "src/user.test.ts": tests, "src/user.ts": USER };
 
-  const root = plant({ "tsconfig.json": TSCONFIG, ...files });
-  const checked = Object.keys(files);
-  const shared: SharedSources = new Map();
+    const root = plant({ "tsconfig.json": TSCONFIG, ...files });
+    const checked = Object.keys(files);
 
-  expect(magicDiagnostics(root, checked, shared).ok).toBe(true);
-  expect(guardDiagnostics(root, checked, shared)).toStrictEqual(guardDiagnostics(root, checked));
-});
+    const after = await onApi(root, async (run) => {
+      const magic = await magicDiagnostics(run, root, checked);
+
+      expect(magic.ok).toBe(true);
+
+      return guardDiagnostics(run, root, checked);
+    });
+
+    expect(after).toStrictEqual({
+      ok: true,
+      value: [
+        untested("src/other.ts:1:14", "isOther"),
+        untested("src/user.ts:3:17", "isUser"),
+        untested("src/user.ts:7:14", "isName"),
+      ],
+    });
+  },
+);

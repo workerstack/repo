@@ -2,37 +2,54 @@
  * Type guards proven with an input they must reject: an exported function whose return type is a type predicate needs
  * a test that asserts it returns false, else a lint diagnostic `repo(guard-rejects)` the baseline counts. A guard
  * tested only on what it accepts still passes a guard that accepts everything. The tests are read with the type
- * checker, so an import renamed or through a namespace still reaches the guard.
+ * checker of TypeScript 7, so an import renamed or through a namespace still reaches the guard.
  */
 import fs from "node:fs";
 import path from "node:path";
 
-import ts from "typescript-5.9";
+import { ModifierFlags, SyntaxKind } from "typescript/unstable/ast";
+import type {
+  ArrowFunction,
+  CallExpression,
+  FunctionDeclaration,
+  FunctionExpression,
+  Identifier,
+  Node,
+  PropertyAccessExpression,
+  SourceFile,
+  Statement,
+} from "typescript/unstable/ast";
+import {
+  isArrowFunction,
+  isCallExpression,
+  isFunctionDeclaration,
+  isFunctionExpression,
+  isIdentifier,
+  isImportDeclaration,
+  isPropertyAccessExpression,
+  isSourceFile,
+  isVariableStatement,
+} from "typescript/unstable/ast/is";
+import { SymbolFlags, TypePredicateKind, type Project, type Symbol as TsSymbol } from "typescript/unstable/async";
 
+import { EXPECT } from "./expect.constants.ts";
 import type { Result } from "./result.ts";
 import { codeOf, GUARD_REJECTS } from "./script-rules.ts";
 import type { Diagnostic } from "./scripts/lint-baseline.ts";
-import {
-  byOwner,
-  isChecked,
-  isTest,
-  type Owner,
-  ownerOf,
-  ownerProgram,
-  posix,
-  type SharedSources,
-} from "./ts-program.ts";
+import { type OwnerConfig, ownerConfig, sourcesOf, type TsRun, withFiles } from "./ts-api.ts";
+import { modifierFlagsOf } from "./ts-nodes.ts";
+import { byOwner, isChecked, isTest, ownerOf, posix } from "./ts-program.ts";
 
 /** An exported guard: its declared name node and the symbol a call resolves to. */
-type Guard = { name: ts.Identifier; symbol: ts.Symbol };
+type Guard = { name: Identifier; symbol: TsSymbol };
 
-/**
- * One tsconfig's files, as program paths: the sources to report in and the changed tests whose imports join them; and
- * the source files the run's programs share.
- */
-type Group = Owner & { sources: string[]; tests: string[] };
+/** One tsconfig's files, as posix paths: the root, its dir, the sources to report in and the changed tests. */
+type Group = { root: string; dir: string | null; sources: string[]; tests: string[] };
 
-type FunctionLike = ts.FunctionDeclaration | ts.ArrowFunction | ts.FunctionExpression;
+type FunctionLike = FunctionDeclaration | ArrowFunction | FunctionExpression;
+
+/** An exported function and the name it is declared with. */
+type Named = { name: Identifier; fn: FunctionLike };
 
 const RULE = /* @__PURE__ */ codeOf(GUARD_REJECTS);
 
@@ -46,119 +63,140 @@ const FALSE_MATCHERS: ReadonlyMap<string, number> = /* @__PURE__ */ new Map([
   ["toBeFalsy", 0],
 ]);
 
-/** vitest's `expect`, as the checker spells an identifier. */
-const EXPECT: ts.__String = /* @__PURE__ */ ts.escapeLeadingUnderscores("expect");
-
 function message(name: string): string {
   return `${name} is never asserted false; add expect(${name}(<an input it must reject>)).toBe(false) to a test`;
 }
 
-function isExported(node: ts.Declaration): boolean {
-  return (ts.getCombinedModifierFlags(node) & ts.ModifierFlags.Export) !== 0;
+function isExported(node: Parameters<typeof modifierFlagsOf>[0]): boolean {
+  return (modifierFlagsOf(node) & ModifierFlags.Export) !== 0;
 }
 
 /** Whether `fn` returns `x is T` or `this is T`, written or inferred; an `asserts` function is no guard. */
-function isGuard(fn: FunctionLike, checker: ts.TypeChecker): boolean {
-  const signatures = [checker.getSignatureFromDeclaration(fn)].filter((signature) => signature !== undefined);
+async function isGuard(fn: FunctionLike, project: Project): Promise<boolean> {
+  const signatures = [await project.checker.getSignatureFromDeclaration(fn)].filter(
+    (signature) => signature !== undefined,
+  );
 
-  return signatures.some((signature) => {
-    const kind = checker.getTypePredicateOfSignature(signature)?.kind;
+  const predicates = await Promise.all(
+    signatures.map((signature) => project.checker.getTypePredicateOfSignature(signature)),
+  );
 
-    return kind === ts.TypePredicateKind.Identifier || kind === ts.TypePredicateKind.This;
-  });
+  return predicates.some(
+    (predicate) => predicate?.kind === TypePredicateKind.Identifier || predicate?.kind === TypePredicateKind.This,
+  );
 }
 
 /** The exported function declarations and `const` function values of a statement, with their names. */
-function functionsOf(statement: ts.Statement): { name: ts.Identifier; fn: FunctionLike }[] {
-  if (ts.isFunctionDeclaration(statement) && statement.name !== undefined && isExported(statement))
+function functionsOf(statement: Statement): Named[] {
+  if (isFunctionDeclaration(statement) && statement.name !== undefined && isExported(statement))
     return [{ fn: statement, name: statement.name }];
 
-  if (!ts.isVariableStatement(statement)) return [];
+  if (!isVariableStatement(statement)) return [];
 
   return statement.declarationList.declarations.flatMap((declaration) => {
     const init = declaration.initializer;
-    const isFunction = init !== undefined && (ts.isArrowFunction(init) || ts.isFunctionExpression(init));
+    const isFunction = init !== undefined && (isArrowFunction(init) || isFunctionExpression(init));
 
-    if (!isFunction || !ts.isIdentifier(declaration.name) || !isExported(declaration)) return [];
+    if (!isFunction || !isIdentifier(declaration.name) || !isExported(declaration)) return [];
 
     return [{ fn: init, name: declaration.name }];
   });
 }
 
-function guardsOf(file: ts.SourceFile, checker: ts.TypeChecker): Guard[] {
-  return file.statements.flatMap((statement) =>
-    functionsOf(statement).flatMap(({ name, fn }) => {
-      const symbol = checker.getSymbolAtLocation(name);
+/** The exported guards `file` declares. */
+async function guardsOf(file: SourceFile, project: Project): Promise<Guard[]> {
+  const named = file.statements.flatMap(functionsOf);
 
-      return symbol !== undefined && isGuard(fn, checker) ? [{ name, symbol }] : [];
-    }),
-  );
+  if (named.length === 0) return [];
+  const symbols = await project.checker.getSymbolAtLocation(named.map(({ name }) => name));
+  const guards: Guard[] = [];
+
+  for (const [index, { fn, name }] of named.entries()) {
+    const symbol = symbols[index];
+
+    if (symbol !== undefined && (await isGuard(fn, project))) guards.push({ name, symbol });
+  }
+
+  return guards;
 }
 
 /** The symbol an imported name finally declares, through renames, namespaces and re-exports. */
-function resolved(symbol: ts.Symbol, checker: ts.TypeChecker): ts.Symbol {
-  return (symbol.flags & ts.SymbolFlags.Alias) === 0 ? symbol : checker.getAliasedSymbol(symbol);
+async function resolved(symbol: TsSymbol, project: Project): Promise<TsSymbol> {
+  return (symbol.flags & SymbolFlags.Alias) === 0 ? symbol : await project.checker.getAliasedSymbol(symbol);
 }
 
 /** Whether `call` is a matcher asserting false: `.toBe(false)`, `.toEqual(false)` or `.toBeFalsy()`. */
-function assertsFalse(
-  call: ts.CallExpression,
-): call is ts.CallExpression & { expression: ts.PropertyAccessExpression } {
-  if (!ts.isPropertyAccessExpression(call.expression)) return false;
+function assertsFalse(call: CallExpression): call is CallExpression & { expression: PropertyAccessExpression } {
+  if (!isPropertyAccessExpression(call.expression)) return false;
   const count = FALSE_MATCHERS.get(call.expression.name.text);
 
   if (count !== call.arguments.length) return false;
   const [arg] = call.arguments;
 
-  return arg === undefined || arg.kind === ts.SyntaxKind.FalseKeyword;
+  return arg === undefined || arg.kind === SyntaxKind.FalseKeyword;
 }
 
 /** The function `call` asserts false the result of, as in `expect(isUser(input)).toBe(false)`. */
-function falseCallee(call: ts.CallExpression): ts.Node | undefined {
+function falseCallee(call: CallExpression): Node | undefined {
   if (!assertsFalse(call)) return undefined;
   const expected = call.expression.expression;
 
-  if (!ts.isCallExpression(expected) || !ts.isIdentifier(expected.expression)) return undefined;
+  if (!isCallExpression(expected) || !isIdentifier(expected.expression)) return undefined;
 
-  if (expected.expression.escapedText !== EXPECT) return undefined;
+  if (expected.expression.text !== EXPECT) return undefined;
   const [subject] = expected.arguments;
 
-  if (subject === undefined || !ts.isCallExpression(subject)) return undefined;
+  if (subject === undefined || !isCallExpression(subject)) return undefined;
   const callee = subject.expression;
 
-  return ts.isPropertyAccessExpression(callee) ? callee.name : callee;
+  return isPropertyAccessExpression(callee) ? callee.name : callee;
 }
 
 /** Every symbol a test file asserts a call of returns false. */
-function assertedFalse(file: ts.SourceFile, checker: ts.TypeChecker): ts.Symbol[] {
-  const found: ts.Symbol[] = [];
+async function assertedFalse(file: SourceFile, project: Project): Promise<TsSymbol[]> {
+  const callees: Node[] = [];
 
-  function visit(node: ts.Node): void {
-    const callee = ts.isCallExpression(node) ? falseCallee(node) : undefined;
-    const symbol = callee === undefined ? undefined : checker.getSymbolAtLocation(callee);
+  function visit(node: Node): void {
+    const callee = isCallExpression(node) ? falseCallee(node) : undefined;
 
-    if (symbol !== undefined) found.push(resolved(symbol, checker));
-    ts.forEachChild(node, visit);
+    if (callee !== undefined) callees.push(callee);
+    node.forEachChild(visit);
   }
 
   visit(file);
 
+  if (callees.length === 0) return [];
+  const found: TsSymbol[] = [];
+
+  for (const symbol of await project.checker.getSymbolAtLocation(callees))
+    if (symbol !== undefined) found.push(await resolved(symbol, project));
+
   return found;
 }
 
-/** The program paths of the modules `file` imports. */
-function importsOf(file: ts.SourceFile, checker: ts.TypeChecker): string[] {
-  return file.statements.flatMap((statement) => {
-    if (!ts.isImportDeclaration(statement)) return [];
-    const declaration = checker.getSymbolAtLocation(statement.moduleSpecifier)?.valueDeclaration;
+/** The posix paths of the source files `file` imports. */
+async function importsOf(file: SourceFile, project: Project): Promise<string[]> {
+  const specifiers = file.statements.flatMap((statement) =>
+    isImportDeclaration(statement) ? [statement.moduleSpecifier] : [],
+  );
 
-    return declaration !== undefined && ts.isSourceFile(declaration) ? [declaration.fileName] : [];
-  });
+  if (specifiers.length === 0) return [];
+  const paths: string[] = [];
+
+  for (const symbol of await project.checker.getSymbolAtLocation(specifiers)) {
+    const handle = symbol?.valueDeclaration;
+    // A handle's path is the checker's canonical one, lower case on a case-blind disk; the node keeps the spelling.
+    const declaration = handle?.kind === SyntaxKind.SourceFile ? await handle.resolve(project) : undefined;
+
+    if (declaration !== undefined && isSourceFile(declaration)) paths.push(declaration.fileName);
+  }
+
+  return paths;
 }
 
-/** The tsconfig's tests that assert some call false, read as text first so a program parses only those. */
-function falseTests(group: Group, fileNames: readonly string[]): string[] {
-  const owned = fileNames.filter((fileName) => {
+/** The tsconfig's tests that assert some call false, read as text first so a project parses only those. */
+function falseTests(group: Group, config: OwnerConfig): string[] {
+  const owned = config.fileNames.filter((fileName) => {
     const rel = path.posix.relative(group.root, fileName);
 
     return isTest(rel) && ownerOf(group.root, rel) === group.dir;
@@ -168,10 +206,10 @@ function falseTests(group: Group, fileNames: readonly string[]): string[] {
 }
 
 /** The sources to report in: the group's, and those its changed tests import from the same tsconfig. */
-function targetsOf(group: Group, program: ts.Program): string[] {
-  const checker = program.getTypeChecker();
-  const tests = program.getSourceFiles().filter((file) => group.tests.includes(file.fileName));
-  const imported = tests.flatMap((file) => importsOf(file, checker));
+async function targetsOf(group: Group, project: Project): Promise<string[]> {
+  const imported: string[] = [];
+
+  for (const file of await sourcesOf(project, group.tests)) imported.push(...(await importsOf(file, project)));
 
   const owned = imported.filter((fileName) => {
     const rel = path.posix.relative(group.root, fileName);
@@ -183,38 +221,54 @@ function targetsOf(group: Group, program: ts.Program): string[] {
 }
 
 /** The guards declared in `targets`. */
-function guardsIn(program: ts.Program, targets: readonly string[]): Guard[] {
-  const checker = program.getTypeChecker();
-  const files = program.getSourceFiles().filter((file) => targets.includes(file.fileName));
+async function guardsIn(project: Project, targets: readonly string[]): Promise<Guard[]> {
+  const guards: Guard[] = [];
 
-  return files.flatMap((file) => guardsOf(file, checker));
+  for (const file of await sourcesOf(project, targets)) guards.push(...(await guardsOf(file, project)));
+
+  return guards;
+}
+
+/** The guards of `targets` no test among `tests` asserts false, from a project over both. */
+async function untestedIn(project: Project, targets: readonly string[], tests: readonly string[]): Promise<Guard[]> {
+  const asserted = new Set<TsSymbol>();
+
+  for (const file of await sourcesOf(project, tests))
+    for (const symbol of await assertedFalse(file, project)) asserted.add(symbol);
+
+  const guards = await guardsIn(project, targets);
+
+  return guards.filter((guard) => !asserted.has(guard.symbol));
 }
 
 /**
- * One group's untested guards. A first program finds the targets and whether they declare a guard; only then a second
+ * One group's untested guards. A first project finds the targets and whether they declare a guard; only then a second
  * adds the tests that could assert one false, reusing what the first parsed.
  */
-function groupGuards(group: Group): Result<Guard[]> {
-  const opened = ownerProgram(group, [...group.sources, ...group.tests]);
+async function groupGuards(run: TsRun, group: Group): Promise<Result<Guard[]>> {
+  const config = await ownerConfig(run, group.root, group.dir);
 
-  if (!opened.ok) return opened;
-  const { program: first, setup, widen } = opened.value;
-  const targets = targetsOf(group, first);
+  if (!config.ok) return config;
+  const { base, dir } = config.value;
 
-  if (guardsIn(first, targets).length === 0) return { ok: true, value: [] };
-  const tests = [...new Set([...falseTests(group, setup.fileNames), ...group.tests])];
-  const program = widen([...targets, ...tests]);
-  const checker = program.getTypeChecker();
-  const testFiles = program.getSourceFiles().filter((file) => tests.includes(file.fileName));
-  const asserted = new Set(testFiles.flatMap((file) => assertedFalse(file, checker)));
+  const guards = await withFiles(run, { base, dir, files: [...group.sources, ...group.tests] }, async (project) => {
+    const targets = await targetsOf(group, project);
 
-  return { ok: true, value: guardsIn(program, targets).filter((guard) => !asserted.has(guard.symbol)) };
+    const declared = await guardsIn(project, targets);
+
+    if (declared.length === 0) return [];
+    const tests = [...new Set([...falseTests(group, config.value), ...group.tests])];
+
+    return withFiles(run, { base, dir, files: [...targets, ...tests] }, (wider) => untestedIn(wider, targets, tests));
+  });
+
+  return { ok: true, value: guards };
 }
 
 function diagnosticOf(root: string, { name }: Guard): Diagnostic {
   const file = name.getSourceFile();
   const rel = path.posix.relative(root, file.fileName);
-  const { line, character } = file.getLineAndCharacterOfPosition(name.getStart());
+  const { line, character } = file.getLineAndCharacterOfPosition(name.getStart(file));
 
   return { file: rel, line: `${rel}:${line + 1}:${character + 1}: error ${RULE}: ${message(name.text)}`, rule: RULE };
 }
@@ -222,14 +276,13 @@ function diagnosticOf(root: string, { name }: Guard): Diagnostic {
 /**
  * The untested exported guards of the checked sources among `files` (root-relative POSIX paths), and of the sources
  * the tests among them import, in oxlint's line form; or why a tsconfig.json could not be read. A guard passes when a
- * test of its tsconfig asserts a call of it false. `shared` holds the source files parsed for another check of the
- * same run.
+ * test of its tsconfig asserts a call of it false. Each owner's projects open on `run`, one at a time.
  */
-export function guardDiagnostics(
+export async function guardDiagnostics(
+  run: TsRun,
   root: string,
   files: readonly string[],
-  shared: SharedSources = new Map(),
-): Result<Diagnostic[]> {
+): Promise<Result<Diagnostic[]>> {
   const real = posix(fs.realpathSync(root));
   const diagnostics: Diagnostic[] = [];
 
@@ -237,11 +290,11 @@ export function guardDiagnostics(
     real,
     files.filter((file) => isChecked(file) || isTest(file)),
   )) {
-    const group: Group = { dir, root: real, shared, sources: [], tests: [] };
+    const group: Group = { dir, root: real, sources: [], tests: [] };
 
     for (const fileName of owned)
       (isTest(path.posix.relative(real, fileName)) ? group.tests : group.sources).push(fileName);
-    const found = groupGuards(group);
+    const found = await groupGuards(run, group);
 
     if (!found.ok) return found;
     diagnostics.push(...found.value.map((guard) => diagnosticOf(real, guard)));

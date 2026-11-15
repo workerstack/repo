@@ -1,5 +1,12 @@
 /** What both magic checks ask of a syntax node: a const's string, where a hit sits, and the constants homes. */
-import ts from "typescript-5.9";
+import { NodeFlags } from "typescript/unstable/ast";
+import type { Expression, Node, StringLiteralLikeNode, VariableDeclaration } from "typescript/unstable/ast";
+import {
+  isAsExpression,
+  isParenthesizedExpression,
+  isSatisfiesExpression,
+  isStringLiteralLikeNode,
+} from "typescript/unstable/ast/is";
 
 import type { MagicHit } from "./magic-hit.ts";
 
@@ -17,27 +24,27 @@ export function isConstantsModule(specifier: string): boolean {
   return CONSTANTS_FILE.test(specifier) || CONSTANTS_PACKAGE.test(specifier);
 }
 
-export function isConstDeclaration(declaration: ts.VariableDeclaration): boolean {
-  return (ts.getCombinedNodeFlags(declaration) & ts.NodeFlags.Const) !== 0;
+/** Whether `declaration` is a `const`, which its declaration list says. */
+export function isConstDeclaration(declaration: VariableDeclaration): boolean {
+  return ((declaration.flags | declaration.parent.flags) & NodeFlags.Const) !== 0;
 }
 
 /** `node` without the parentheses, `as` and `satisfies` around it, which change a type and never a value. */
-function unwrapped(node: ts.Expression): ts.Expression {
+function unwrapped(node: Expression): Expression {
   let bare = node;
 
-  while (ts.isParenthesizedExpression(bare) || ts.isAsExpression(bare) || ts.isSatisfiesExpression(bare))
-    bare = bare.expression;
+  while (isParenthesizedExpression(bare) || isAsExpression(bare) || isSatisfiesExpression(bare)) bare = bare.expression;
 
   return bare;
 }
 
 /** A string literal that says something: not empty and not punctuation alone. */
-export function isMeaningful(node: ts.Expression): node is ts.StringLiteralLike {
-  return ts.isStringLiteralLike(node) && MEANINGFUL.test(node.text);
+export function isMeaningful(node: Node): node is StringLiteralLikeNode {
+  return isStringLiteralLikeNode(node) && MEANINGFUL.test(node.text);
 }
 
 /** The string a `const` holds, when its initializer is a literal that says something; null for any other. */
-export function constString(declaration: ts.VariableDeclaration): string | null {
+export function constString(declaration: VariableDeclaration): string | null {
   if (declaration.initializer === undefined || !isConstDeclaration(declaration)) return null;
   const value = unwrapped(declaration.initializer);
 
@@ -45,7 +52,7 @@ export function constString(declaration: ts.VariableDeclaration): string | null 
 }
 
 /** A hit reported at the start of `node`, with its one-based line and column. */
-export function hitAt(node: ts.Node, rule: string, message: string): MagicHit {
+export function hitAt(node: Node, rule: string, message: string): MagicHit {
   const file = node.getSourceFile();
   const at = node.getStart(file);
   const { line, character } = file.getLineAndCharacterOfPosition(at);

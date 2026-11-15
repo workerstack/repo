@@ -5,6 +5,7 @@
  * prints, and Stylelint's on the CSS. Apart from `check-magic.ts` and `check-guards.ts`, which this imports, so neither
  * imports the other.
  */
+import fs from "node:fs";
 import path from "node:path";
 
 import { sourceFiles } from "./check-comments.ts";
@@ -21,7 +22,8 @@ import { RUST_SOURCE } from "./rust/rust-hits.constants.ts";
 import { rustHitsAt, rustSourceDiagnostics, rustSources, type RustOptions } from "./rust/rust-hits.ts";
 import type { Diagnostic } from "./scripts/lint-baseline.ts";
 import { standardsRoot } from "./standards-root.ts";
-import type { SharedSources } from "./ts-program.ts";
+import { withTsApi } from "./ts-api.ts";
+import { isChecked, isTest, posix } from "./ts-program.ts";
 
 /** `repo check`'s script hits: all of them for the skip report, those no skip turns off for the baseline. */
 export type ScriptCheck = { all: Diagnostic[]; kept: Diagnostic[]; problems: string[] };
@@ -55,6 +57,23 @@ function byPlace(a: Diagnostic, b: Diagnostic): number {
 }
 
 /**
+ * The magic hits and untested guards of `files`, on one TypeScript 7 API; none, and no API started, when no file is
+ * TypeScript either check reads.
+ */
+function typedDiagnostics(root: string, files: readonly string[]): Promise<Result<Diagnostic[]>> {
+  if (!files.some((rel) => isChecked(rel) || isTest(rel))) return Promise.resolve({ ok: true, value: [] });
+
+  return withTsApi(posix(fs.realpathSync(root)), async (run) => {
+    const magic = await magicDiagnostics(run, root, files);
+
+    if (!magic.ok) return magic;
+    const guards = await guardDiagnostics(run, root, files);
+
+    return guards.ok ? { ok: true, value: [...magic.value, ...guards.value] } : guards;
+  });
+}
+
+/**
  * The magic hits, untested guards and clone sides of `scope.files` (root-relative POSIX paths), in file then position
  * order, a clone's other side looked for in every one of `scope.sources`; the guards of the sources a test among the
  * files imports too; and the Rust source rules (never clippy, which compiles) on the `.rs` files among them, in a repo
@@ -68,13 +87,9 @@ export async function scriptDiagnostics(
 ): Promise<Result<Diagnostic[]>> {
   const { files } = scope;
   const { target, ...css } = options;
-  const shared: SharedSources = new Map();
-  const magic = magicDiagnostics(root, files, shared);
+  const typed = await typedDiagnostics(root, files);
 
-  if (!magic.ok) return magic;
-  const guards = guardDiagnostics(root, files, shared);
-
-  if (!guards.ok) return guards;
+  if (!typed.ok) return typed;
   const clones = duplicateDiagnostics(root, scope, target);
 
   if (!clones.ok) return clones;
@@ -89,7 +104,7 @@ export async function scriptDiagnostics(
 
   return {
     ok: true,
-    value: [...magic.value, ...guards.value, ...clones.value, ...sheets.value, ...rust].toSorted(byPlace),
+    value: [...typed.value, ...clones.value, ...sheets.value, ...rust].toSorted(byPlace),
   };
 }
 

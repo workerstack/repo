@@ -104,10 +104,19 @@ export default defineConfig({
         rules: ["eslint/no-await-in-loop"],
       },
       {
-        files: ["cli/check-rejections.ts", "cli/check-tsconfig.ts", "cli/ts-api.test.ts"],
+        files: [
+          "cli/check-magic.ts",
+          "cli/check-rejections.ts",
+          "cli/check-tsconfig.ts",
+          "cli/guard-diagnostics.ts",
+          "cli/magic/magic-numbers.ts",
+          "cli/magic/magic-strings.ts",
+          "cli/ts-api.test.ts",
+          "cli/ts-api.ts",
+        ],
         reason:
-          "each loop reads one tsconfig or project at a time on one typescript api; two reads at once " +
-          "leave a handle that keeps the process alive after the api closes",
+          "each loop reads one tsconfig, project or checker answer at a time on one typescript api; " +
+          "two reads at once leave a handle that keeps the process alive after the api closes",
         rules: ["eslint/no-await-in-loop"],
       },
       {

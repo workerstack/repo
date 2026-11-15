@@ -4,9 +4,34 @@
  * that scales. A schema bound, an argument of `.max(…)` and its kin on a value with a `parse` method, must be a
  * constant imported from a constants file or package.
  */
-import ts from "typescript-5.9";
+import { ModifierFlags, SyntaxKind } from "typescript/unstable/ast";
+import type {
+  CallExpression,
+  Expression,
+  Identifier,
+  Node,
+  NumericLiteral,
+  PropertyAccessExpression,
+  SourceFile,
+} from "typescript/unstable/ast";
+import {
+  isBinaryExpression,
+  isCallExpression,
+  isEnumMember,
+  isIdentifier,
+  isImportDeclaration,
+  isLiteralTypeNode,
+  isNumericLiteral,
+  isPrefixUnaryExpression,
+  isPropertyAccessExpression,
+  isPropertyDeclaration,
+  isStringLiteral,
+  isVariableDeclaration,
+} from "typescript/unstable/ast/is";
+import type { Project } from "typescript/unstable/async";
 
 import { MAGIC_NUMBER } from "../script-rules.ts";
+import { ancestorOf, modifierFlagsOf } from "../ts-nodes.ts";
 import type { MagicHit } from "./magic-hit.ts";
 import { hitAt, isConstantsModule, isConstDeclaration } from "./magic-nodes.ts";
 
@@ -18,139 +43,171 @@ const IDENTITIES = [0, 1];
 const SCALE = 2;
 
 const SCALING = [
-  ts.SyntaxKind.AsteriskToken,
-  ts.SyntaxKind.SlashToken,
-  ts.SyntaxKind.PercentToken,
-  ts.SyntaxKind.AsteriskAsteriskToken,
+  SyntaxKind.AsteriskToken,
+  SyntaxKind.SlashToken,
+  SyntaxKind.PercentToken,
+  SyntaxKind.AsteriskAsteriskToken,
 ];
 
-const ARITHMETIC = [...SCALING, ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken];
+const ARITHMETIC = [...SCALING, SyntaxKind.PlusToken, SyntaxKind.MinusToken];
 
 /** What a literal sits in and still names what the const, enum member or readonly field around it names. */
 const CONTAINERS = [
-  ts.SyntaxKind.ParenthesizedExpression,
-  ts.SyntaxKind.AsExpression,
-  ts.SyntaxKind.SatisfiesExpression,
-  ts.SyntaxKind.ArrayLiteralExpression,
-  ts.SyntaxKind.ObjectLiteralExpression,
-  ts.SyntaxKind.PropertyAssignment,
-  ts.SyntaxKind.PrefixUnaryExpression,
+  SyntaxKind.ParenthesizedExpression,
+  SyntaxKind.AsExpression,
+  SyntaxKind.SatisfiesExpression,
+  SyntaxKind.ArrayLiteralExpression,
+  SyntaxKind.ObjectLiteralExpression,
+  SyntaxKind.PropertyAssignment,
+  SyntaxKind.PrefixUnaryExpression,
 ];
+
+/** A call that has a schema bound's shape, like `max` in `z.string().max(2048)`, before its receiver is typed. */
+type BoundCall = CallExpression & { expression: PropertyAccessExpression };
 
 function namesNothing(text: string) {
   return `${text} names nothing; give it a named const`;
 }
 
-function bound(method: string, arg: ts.Node) {
+function bound(method: string, arg: Node) {
   return `.${method}(${arg.getText()}) is a schema bound; import it from a *.constants.ts file or a constants package`;
 }
 
-function isArithmetic(node: ts.Node) {
-  return ts.isBinaryExpression(node) && ARITHMETIC.includes(node.operatorToken.kind);
+function isArithmetic(node: Node) {
+  return isBinaryExpression(node) && ARITHMETIC.includes(node.operatorToken.kind);
 }
 
-function isScaling(node: ts.Node) {
-  return ts.isBinaryExpression(node) && SCALING.includes(node.operatorToken.kind);
+function isScaling(node: Node) {
+  return isBinaryExpression(node) && SCALING.includes(node.operatorToken.kind);
 }
 
 /** The literal with its minus: `-1` is one value. */
-function unitOf(literal: ts.NumericLiteral): ts.Expression {
+function unitOf(literal: NumericLiteral): Expression {
   const { parent } = literal;
 
-  return ts.isPrefixUnaryExpression(parent) && parent.operator === ts.SyntaxKind.MinusToken ? parent : literal;
+  return isPrefixUnaryExpression(parent) && parent.operator === SyntaxKind.MinusToken ? parent : literal;
 }
 
 /** Whether `unit`, climbed through its containers, is what a `const`, an enum member or a readonly field holds. */
-function isNamed(unit: ts.Node): boolean {
+function isNamed(unit: Node): boolean {
   let node = unit;
 
   while (CONTAINERS.includes(node.parent.kind) || isArithmetic(node.parent)) node = node.parent;
   const holder = node.parent;
 
-  if (ts.isVariableDeclaration(holder)) return isConstDeclaration(holder);
+  if (isVariableDeclaration(holder)) return isConstDeclaration(holder);
 
-  if (ts.isPropertyDeclaration(holder)) return (ts.getCombinedModifierFlags(holder) & ts.ModifierFlags.Readonly) !== 0;
+  if (isPropertyDeclaration(holder)) return (modifierFlagsOf(holder) & ModifierFlags.Readonly) !== 0;
 
-  return ts.isEnumMember(holder);
+  return isEnumMember(holder);
 }
 
-/** The method of a schema-bound call `node` is, like `max` in `z.string().max(2048)`; null for any other node. */
-function boundOf(node: ts.Node, checker: ts.TypeChecker): string | null {
-  if (!ts.isCallExpression(node) || !ts.isPropertyAccessExpression(node.expression)) return null;
-  const method = node.expression.name.text;
-
-  if (!SCHEMA_BOUNDS.includes(method)) return null;
-  const receiver = checker.getTypeAtLocation(node.expression.expression);
-
-  return receiver.getProperty(PARSE) === undefined ? null : method;
+/** Whether `node` is a call named like a schema bound, whatever its receiver. */
+function isBoundCall(node: Node): node is BoundCall {
+  return (
+    isCallExpression(node) &&
+    isPropertyAccessExpression(node.expression) &&
+    SCHEMA_BOUNDS.includes(node.expression.name.text)
+  );
 }
 
-function numberHit(literal: ts.NumericLiteral, checker: ts.TypeChecker): MagicHit | null {
+/** The bound-shaped calls whose receiver has a `parse` method: the schema bounds. */
+async function schemaBounds(calls: readonly BoundCall[], project: Project): Promise<BoundCall[]> {
+  if (calls.length === 0) return [];
+  const { checker } = project;
+  const receivers = await checker.getTypeAtLocation(calls.map((call) => call.expression.expression));
+  const schemas: BoundCall[] = [];
+
+  for (const [index, call] of calls.entries()) {
+    const receiver = receivers[index];
+
+    if (receiver !== undefined && (await checker.getPropertyOfType(receiver, PARSE)) !== undefined) schemas.push(call);
+  }
+
+  return schemas;
+}
+
+/** The hit a literal makes, given the method of each schema bound call; null for a literal that names something. */
+function numberHit(literal: NumericLiteral, methods: ReadonlyMap<Node, string>): MagicHit | null {
   const unit = unitOf(literal);
 
-  if (ts.isLiteralTypeNode(unit.parent)) return null;
+  if (isLiteralTypeNode(unit.parent)) return null;
   const magnitude = Number(literal.text);
   const value = unit === literal ? magnitude : -magnitude;
 
   if (IDENTITIES.includes(value)) return null;
 
   if (value === SCALE && unit === literal && isScaling(unit.parent)) return null;
-  const method = boundOf(unit.parent, checker);
+  const method = methods.get(unit.parent);
 
-  if (method !== null) return hitAt(unit, MAGIC_NUMBER, bound(method, unit));
+  if (method !== undefined) return hitAt(unit, MAGIC_NUMBER, bound(method, unit));
 
   return isNamed(unit) ? null : hitAt(unit, MAGIC_NUMBER, namesNothing(unit.getText()));
 }
 
-/**
- * Whether a bound argument names a local `const` or an import from a module that is not a constants file or
- * package; a parameter, a `let` or anything computed passes, being no fixed number.
- */
-function isLocalBound(arg: ts.Expression, checker: ts.TypeChecker): boolean {
+/** The identifier a bound argument starts from, as `LIMITS` in `LIMITS.name.max`; null for anything computed. */
+function rootOf(arg: Expression): Identifier | null {
   let root = arg;
 
-  while (ts.isPropertyAccessExpression(root)) root = root.expression;
+  while (isPropertyAccessExpression(root)) root = root.expression;
 
-  if (!ts.isIdentifier(root)) return false;
-  const declaration = checker.getSymbolAtLocation(root)?.declarations?.[0];
+  return isIdentifier(root) ? root : null;
+}
 
+/**
+ * Whether a bound argument's root names a local `const` or an import from a module that is not a constants file or
+ * package, given its symbol's first declaration; a parameter, a `let` or anything computed passes, being no fixed
+ * number.
+ */
+function isLocalBound(declaration: Node | undefined): boolean {
   if (declaration === undefined) return false;
-  const imported = ts.findAncestor(declaration, ts.isImportDeclaration);
+  const imported = ancestorOf(declaration, isImportDeclaration);
 
-  if (imported === undefined) return ts.isVariableDeclaration(declaration) && isConstDeclaration(declaration);
+  if (imported === undefined) return isVariableDeclaration(declaration) && isConstDeclaration(declaration);
 
-  const specifier =
-    imported.moduleSpecifier /* an import that parses names its module in a string literal */ as ts.StringLiteral;
-
-  return !isConstantsModule(specifier.text);
+  // An import that parses names its module in a string literal.
+  return isStringLiteral(imported.moduleSpecifier) && !isConstantsModule(imported.moduleSpecifier.text);
 }
 
-function boundHits(call: ts.CallExpression, checker: ts.TypeChecker): MagicHit[] {
-  const method = boundOf(call, checker);
+/** The hits at the schema bounds' arguments that name a local or non-constants value. */
+async function boundHits(schemas: readonly BoundCall[], project: Project): Promise<MagicHit[]> {
+  const named = schemas.flatMap((call) =>
+    call.arguments.flatMap((arg) => {
+      const root = rootOf(arg);
 
-  if (method === null) return [];
+      return root === null ? [] : [{ arg, method: call.expression.name.text, root }];
+    }),
+  );
 
-  return call.arguments
-    .filter((arg) => isLocalBound(arg, checker))
-    .map((arg) => hitAt(arg, MAGIC_NUMBER, bound(method, arg)));
-}
-
-/** Every magic number of `file` and every schema bound not imported from a constants home, in source order. */
-export function magicNumbers(file: ts.SourceFile, checker: ts.TypeChecker): MagicHit[] {
+  if (named.length === 0) return [];
+  const symbols = await project.checker.getSymbolAtLocation(named.map(({ root }) => root));
   const hits: MagicHit[] = [];
 
-  function visit(node: ts.Node): void {
-    if (ts.isNumericLiteral(node)) {
-      const found = numberHit(node, checker);
+  for (const [index, { arg, method }] of named.entries()) {
+    const handle = symbols[index]?.declarations[0];
 
-      if (found !== null) hits.push(found);
-    }
+    if (isLocalBound(await handle?.resolve(project))) hits.push(hitAt(arg, MAGIC_NUMBER, bound(method, arg)));
+  }
 
-    if (ts.isCallExpression(node)) hits.push(...boundHits(node, checker));
-    ts.forEachChild(node, visit);
+  return hits;
+}
+
+/** Every magic number of `file` and every schema bound not imported from a constants home. */
+export async function magicNumbers(file: SourceFile, project: Project): Promise<MagicHit[]> {
+  const literals: NumericLiteral[] = [];
+  const calls: BoundCall[] = [];
+
+  function visit(node: Node): void {
+    if (isNumericLiteral(node)) literals.push(node);
+
+    if (isBoundCall(node)) calls.push(node);
+    node.forEachChild(visit);
   }
 
   visit(file);
+  const schemas = await schemaBounds(calls, project);
+  const methods = new Map<Node, string>(schemas.map((call) => [call, call.expression.name.text]));
+  const numbers = literals.map((literal) => numberHit(literal, methods)).filter((hit) => hit !== null);
 
-  return hits;
+  return [...numbers, ...(await boundHits(schemas, project))];
 }

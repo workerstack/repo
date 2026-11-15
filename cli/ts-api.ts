@@ -1,11 +1,14 @@
 /** The one way this package opens TypeScript 7's API and reads a tsconfig through it. */
 import fs from "node:fs";
+import path from "node:path";
 
 import { parse, type ParseError } from "jsonc-parser";
+import type { SourceFile } from "typescript/unstable/ast";
 import { API, type CompilerOptions, type Diagnostic, type Project } from "typescript/unstable/async";
 
 import type { Result } from "./result.ts";
 import { errorMessage } from "./sync-errors.ts";
+import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
 
 /** A tsconfig resolved through its extends chain: the options it sets and the root files it type-checks. */
 export type TsConfig = { options: Readonly<CompilerOptions>; fileNames: readonly string[] };
@@ -166,4 +169,36 @@ export async function configOf(run: TsRun, file: string): Promise<Result<TsConfi
   const syntax = await syntaxError(run, file);
 
   return syntax === undefined ? read : { error: syntax, ok: false };
+}
+
+/** Where withFiles checks an owner's files, under the config it extends, and the files that config includes. */
+export type OwnerConfig = Readonly<{ dir: string; base: string | null; fileNames: readonly string[] }>;
+
+/**
+ * The `tsconfig.json` of the owner `dir` (root-relative) under the posix `root`, or why it cannot be read, named by
+ * its root-relative path; for no owner, the root under the defaults, including nothing.
+ */
+export async function ownerConfig(run: TsRun, root: string, dir: string | null): Promise<Result<OwnerConfig>> {
+  if (dir === null) return { ok: true, value: { base: null, dir: root, fileNames: [] } };
+  const read = await configOf(run, path.posix.join(root, dir, RUNTIME_CONFIG));
+
+  if (!read.ok) return { error: [`${path.posix.join(dir, RUNTIME_CONFIG)}: ${read.error}`], ok: false };
+
+  return {
+    ok: true,
+    value: { base: RUNTIME_CONFIG, dir: path.posix.join(root, dir), fileNames: read.value.fileNames },
+  };
+}
+
+/** The source files of `fileNames` the project parsed, in order; a file deleted since it was listed has none. */
+export async function sourcesOf(project: Project, fileNames: readonly string[]): Promise<SourceFile[]> {
+  const files: SourceFile[] = [];
+
+  for (const fileName of fileNames) {
+    const file = await project.program.getSourceFile(fileName);
+
+    if (file !== undefined) files.push(file);
+  }
+
+  return files;
 }

@@ -1,6 +1,3 @@
-import fs from "node:fs";
-import path from "node:path";
-
 import { afterEach, expect, it } from "vitest";
 
 import { magicDiagnostics, withoutSkipped } from "./check-magic.ts";
@@ -18,9 +15,15 @@ import {
   SLOW,
   STRING,
 } from "./magic/__fixtures__/magic-repo.ts";
-import type { SharedSources } from "./ts-program.ts";
+import { withTsApi } from "./ts-api.ts";
+import { posix } from "./ts-program.ts";
 
 afterEach(cleanTemps);
+
+/** The magic hits of `files` under `root`, on an API of their own. */
+function magicAt(root: string, files: readonly string[]) {
+  return withTsApi(posix(root), (run) => magicDiagnostics(run, root, files));
+}
 
 const RETRY = [
   'import { Schema } from "./schema.ts";',
@@ -52,7 +55,7 @@ it("reports each Usage hit at its line and column, in file and position order", 
 it(
   "groups files by their nearest tsconfig.json, so a package's paths resolve and its literal union passes",
   { timeout: SLOW },
-  () => {
+  async () => {
     const api = {
       compilerOptions: {
         module: "preserve",
@@ -71,7 +74,7 @@ it(
       "tsconfig.json": `${JSON.stringify({ compilerOptions: { strict: true }, include: ["src"] })}\n`,
     });
 
-    const found = magicDiagnostics(root, ["src/root.ts", "packages/api/src/use.ts", "packages/api/src/modes.ts"]);
+    const found = await magicAt(root, ["src/root.ts", "packages/api/src/use.ts", "packages/api/src/modes.ts"]);
     expect(found).toStrictEqual({ ok: true, value: [hit("src/root.ts:2:39", STRING, COMPARED("fast"))] });
   },
 );
@@ -79,7 +82,7 @@ it(
 it(
   "finds a copy's comparisons in the package's other files when only the copy's file is checked",
   { timeout: SLOW },
-  () => {
+  async () => {
     const root = plant({
       "src/modes.ts": 'export const SLOW = "slow";\nexport const PLAIN = 7;\n',
       "src/other.test.ts": 'import { SLOW } from "./modes.ts";\nexport const t = (m: string) => m === SLOW;\n',
@@ -88,12 +91,12 @@ it(
       "tsconfig.json": `${JSON.stringify({ compilerOptions: { strict: true }, include: ["src"] })}\n`,
     });
 
-    expect(magicDiagnostics(root, ["src/modes.ts"])).toStrictEqual({
+    expect(await magicAt(root, ["src/modes.ts"])).toStrictEqual({
       ok: true,
       value: [hit("src/modes.ts:1:14", STRING, COPIES("SLOW", "slow"))],
     });
     // The copy lands in a file this run does not check, so it is left to the run that checks it.
-    expect(magicDiagnostics(root, ["src/use.ts"])).toStrictEqual({ ok: true, value: [] });
+    expect(await magicAt(root, ["src/use.ts"])).toStrictEqual({ ok: true, value: [] });
   },
 );
 
@@ -120,25 +123,9 @@ it("checks ts, tsx, mts and cts sources, never tests, declarations, fixtures, e2
   expect(found.map((d) => d.file)).toStrictEqual(checked);
 });
 
-it("parses a file edited between two runs that share their sources again", { timeout: SLOW }, () => {
-  const root = plant({ "src/a.ts": "export const f = () => 5000;\n", "tsconfig.json": '{ "include": ["src"] }\n' });
-  const shared: SharedSources = new Map();
-
-  expect(magicDiagnostics(root, ["src/a.ts"], shared)).toStrictEqual({
-    ok: true,
-    value: [hit("src/a.ts:1:24", NUMBER, NAMES_NOTHING("5000"))],
-  });
-  fs.writeFileSync(path.join(root, "src/a.ts"), "export const f = (n: number) => n + 6000;\n");
-  expect(magicDiagnostics(root, ["src/a.ts"], shared)).toStrictEqual({
-    ok: true,
-    value: [hit("src/a.ts:1:37", NUMBER, NAMES_NOTHING("6000"))],
-  });
-});
-
-it("reports a tsconfig.json typescript cannot read", () => {
+it("reports a tsconfig.json typescript cannot read by its root-relative path", { timeout: SLOW }, async () => {
   const root = plant({ "pkg/a.ts": "export const a = 1;\n", "pkg/tsconfig.json": "{" });
-  const found = magicDiagnostics(root, ["pkg/a.ts"]);
-  expect(found.ok ? [] : found.error).toStrictEqual([expect.stringMatching(/^pkg\/tsconfig\.json: .+/)]);
+  expect(await magicAt(root, ["pkg/a.ts"])).toStrictEqual({ error: ["pkg/tsconfig.json: '}' expected."], ok: false });
 });
 
 it("withoutSkipped drops only the hits of the rule a skip names, in the files its globs match", () => {
