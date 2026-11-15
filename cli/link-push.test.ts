@@ -83,9 +83,8 @@ it("does not stop at a failed install and exits 1", async () => {
   expect(await main(["push"], w.io())).toBe(1);
   expect(w.out).toStrictEqual([`repo link: pushed ${NAME} 0.4.0-dev to ${good}`]);
   expect(w.err).toHaveLength(1);
-  expect(w.err[0]).toMatch(
-    new RegExp(`^repo link: warning: ${NAME} failed to install in ${bad}; it keeps the last good copy: .+`),
-  );
+  const warning = `repo link: warning: ${NAME} failed to install in ${bad}; it keeps the last good copy: `;
+  expect(w.err[0]).toMatch(new RegExp(`^${RegExp.escape(warning)}.+`));
   expect(readDependents(w.main, () => {})).toHaveLength(2);
 });
 
