@@ -3,12 +3,11 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { parse, type ParseError } from "jsonc-parser";
-import type { API } from "typescript/unstable/async";
 import { z } from "zod";
 
 import { isRecord, isString } from "./json.ts";
 import { canonicalPath } from "./scripts/workspace-root.ts";
-import { configOf, type TsConfig, withTsApi } from "./ts-api.ts";
+import { configOf, type TsConfig, type TsRun, withTsApi } from "./ts-api.ts";
 import { RESET, RUNTIME_CONFIG, SRC_CONFIG } from "./tsconfig.constants.ts";
 
 const TSCONFIG_NAME = /^tsconfig(\..+)?\.json$/;
@@ -107,14 +106,14 @@ function rejectProblems(cwd: string, rel: string, fileNames: readonly string[]):
 }
 
 /** What a check of the tsconfigs under `cwd` reads: every listed one, and the canonical path of the base reset.d.ts. */
-type Scan = { api: API; cwd: string; listed: ReadonlySet<string>; reset: string };
+type Scan = { cwd: string; listed: ReadonlySet<string>; reset: string; ts: TsRun };
 
-async function problems({ api, cwd, listed, reset }: Scan, rel: string): Promise<string[]> {
+async function problems({ cwd, listed, reset, ts }: Scan, rel: string): Promise<string[]> {
   const raw = readRaw(cwd, rel);
 
   // A solution config checks no code, so TypeScript never needs to read it.
   if (Array.isArray(raw.files) && raw.files.length === 0 && raw.references !== undefined) return [];
-  const read = await configOf(api, tsPath(cwd, rel));
+  const read = await configOf(ts, tsPath(cwd, rel));
 
   if (!read.ok) return [`tsconfig: ${rel}: ${read.error}`];
   const name = path.posix.basename(rel);
@@ -235,8 +234,8 @@ export function checkTsconfigs(cwd: string, pkgRoot: string): Promise<string[]> 
   const rels = listTsconfigs(cwd);
   const run = runConfigs(cwd, rels);
 
-  return withTsApi(cwd, async (api) => {
-    const scan: Scan = { api, cwd, listed: new Set(rels), reset };
+  return withTsApi(cwd, async (ts) => {
+    const scan: Scan = { cwd, listed: new Set(rels), reset, ts };
     const lines: string[] = [];
 
     for (const rel of rels) lines.push(...(await problems(scan, rel)), ...unrunProblem(rel, run));

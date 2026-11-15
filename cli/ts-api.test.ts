@@ -2,11 +2,11 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import { API } from "typescript/unstable/async";
+import { API, type Project } from "typescript/unstable/async";
 import { describe, expect, it, vi } from "vitest";
 
 import { put, tempDir, useTempDirs } from "./sync/__fixtures__/temp-dirs.ts";
-import { configOf, withTsApi } from "./ts-api.ts";
+import { configOf, lineOf, messageOf, type TsRun, withFiles, withTsApi } from "./ts-api.ts";
 
 useTempDirs();
 
@@ -28,15 +28,15 @@ const EXIT_TIMEOUT = 20_000;
 
 /** `name` in `dir`, read on an API of its own. */
 function readOne(dir: string, name: string) {
-  return withTsApi(dir, (api) => configOf(api, `${dir}/${name}`));
+  return withTsApi(dir, (run) => configOf(run, `${dir}/${name}`));
 }
 
 /** Each of `names` in `dir`, read one at a time on one API, in order. */
 function readAll(dir: string, names: readonly string[]) {
-  return withTsApi(dir, async (api) => {
+  return withTsApi(dir, async (run) => {
     const reads = [];
 
-    for (const name of names) reads.push(await configOf(api, `${dir}/${name}`));
+    for (const name of names) reads.push(await configOf(run, `${dir}/${name}`));
 
     return reads;
   });
@@ -131,7 +131,7 @@ describe("withTsApi", () => {
 
     const script = [
       `const { configOf, withTsApi } = await import(${api});`,
-      `await withTsApi(".", async (api) => [await configOf(api, "broken.json"), await configOf(api, "good.json")]);`,
+      `await withTsApi(".", async (run) => [await configOf(run, "broken.json"), await configOf(run, "good.json")]);`,
     ].join("\n");
 
     const run = spawnSync(process.execPath, ["-e", script], { cwd: dir, encoding: "utf8", timeout: EXIT_TIMEOUT });
@@ -150,5 +150,127 @@ describe("withTsApi", () => {
     ).rejects.toThrow("work failed");
     expect(close).toHaveBeenCalledOnce();
     close.mockRestore();
+  });
+});
+
+/** A file whose parameter has no type, which only a strict config rejects. */
+const UNTYPED = "export function id(x) {\n  return x;\n}\n";
+const IMPLICIT_ANY = "TS7006: Parameter 'x' implicitly has an 'any' type.";
+
+/** The semantic errors of `file` in `project`, as messageOf prints them. */
+async function semanticErrors(project: Project, file: string): Promise<string[]> {
+  const diagnostics = await project.program.getSemanticDiagnostics(file);
+
+  return diagnostics.map((diagnostic) => messageOf(diagnostic));
+}
+
+/** The semantic errors of `src/b.ts` in `dir`, checked with the given base config beside it. */
+function errorsOf(dir: string, base: string | null): Promise<string[]> {
+  const file = `${dir}/src/b.ts`;
+
+  const spec = { base, dir, files: [file] };
+
+  return withTsApi(dir, (run) => withFiles(run, spec, (project) => semanticErrors(project, file)));
+}
+
+/** The files under `dir/src` in a project of `files` over `dir`'s tsconfig.json. */
+async function sourcesOf(dir: string, files: readonly string[]): Promise<string[]> {
+  const spec = { base: "tsconfig.json", dir, files };
+  const names = await withTsApi(dir, (run) => withFiles(run, spec, (project) => project.program.getSourceFileNames()));
+
+  return names.filter((name) => name.startsWith(`${dir}/src/`));
+}
+
+/** Work that only says it ran. */
+function opened(): Promise<string> {
+  return Promise.resolve("opened");
+}
+
+/** How many configs `run` still holds after a withFiles whose work threw `message`. */
+async function heldAfterThrow(run: TsRun, dir: string, message: string): Promise<number> {
+  const work = withFiles(run, { base: "tsconfig.json", dir, files: [`${dir}/src/a.ts`] }, () => {
+    throw new Error(message);
+  });
+
+  await expect(work).rejects.toThrow(message);
+
+  return run.virtual.size;
+}
+
+describe("withFiles", () => {
+  it("checks a listed file under the options of the config it extends", async () => {
+    const strict = folder({ "tsconfig.json": BASE });
+    const loose = folder({ "tsconfig.json": '{"compilerOptions":{"strict":false}}' });
+    put(strict, "src/b.ts", UNTYPED);
+    put(loose, "src/b.ts", UNTYPED);
+
+    expect(await errorsOf(strict, "tsconfig.json")).toStrictEqual([IMPLICIT_ANY]);
+    expect(await errorsOf(loose, "tsconfig.json")).toStrictEqual([]);
+  });
+
+  it("checks a file with no owner under strict defaults", async () => {
+    const dir = folder({});
+    put(dir, "src/b.ts", UNTYPED);
+
+    expect(await errorsOf(dir, null)).toStrictEqual([IMPLICIT_ANY]);
+  });
+
+  it("leaves a listed file that is gone out of the project", async () => {
+    const dir = folder({ "tsconfig.json": BASE });
+
+    expect(await sourcesOf(dir, [`${dir}/src/a.ts`, `${dir}/src/gone.ts`])).toStrictEqual([`${dir}/src/a.ts`]);
+  });
+});
+
+describe("withFiles when it ends", () => {
+  it("drops its config when the work throws, and passes the throw on", async () => {
+    const dir = folder({ "tsconfig.json": BASE });
+
+    expect(await withTsApi(dir, (run) => heldAfterThrow(run, dir, "work failed"))).toBe(0);
+  });
+
+  it("names the config of a relative dir, which TypeScript opens no project for", async () => {
+    const dir = folder({});
+    const spec = { base: null, dir: "src", files: [] };
+
+    const work = withTsApi(dir, (run) => withFiles(run, spec, opened));
+
+    await expect(work).rejects.toThrow("TypeScript opened no project for src/tsconfig.repo-1.json");
+  });
+
+  it("lets the process exit after it checks files twice on one API", () => {
+    const dir = folder({ "tsconfig.json": BASE });
+    const api = JSON.stringify(path.join(import.meta.dirname, "ts-api.ts"));
+    const spec = JSON.stringify({ base: "tsconfig.json", dir, files: [`${dir}/src/a.ts`] });
+
+    const script = [
+      `const { withFiles, withTsApi } = await import(${api});`,
+      `const names = (project) => project.program.getSourceFileNames();`,
+      `const twice = async (run) => [await withFiles(run, ${spec}, names), await withFiles(run, ${spec}, names)];`,
+      `await withTsApi(".", twice);`,
+    ].join("\n");
+
+    const run = spawnSync(process.execPath, ["-e", script], { cwd: dir, encoding: "utf8", timeout: EXIT_TIMEOUT });
+
+    expect({ signal: run.signal, status: run.status }).toStrictEqual({ signal: null, status: 0 });
+  });
+});
+
+describe("messageOf and lineOf", () => {
+  it("flattens a chained error as tsc prints it on one line", async () => {
+    const dir = folder({ "tsconfig.json": '{"compilerOptions":{"strict":true,"exactOptionalPropertyTypes":true}}' });
+    put(dir, "src/b.ts", "export const o: { a?: number } = { a: undefined };\n");
+
+    expect(await errorsOf(dir, "tsconfig.json")).toStrictEqual([
+      "TS2375: Type '{ a: undefined; }' is not assignable to type '{ a?: number; }' with " +
+        "'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.   " +
+        "Types of property 'a' are incompatible.     Type 'undefined' is not assignable to type 'number'.",
+    ]);
+  });
+
+  it("counts lines from one", () => {
+    const text = "a\nb\nc";
+
+    expect([lineOf(text, 0), lineOf(text, 2), lineOf(text, 4)]).toStrictEqual([1, 2, 3]);
   });
 });

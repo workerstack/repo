@@ -200,5 +200,5 @@ export async function checkRejectionsAt(cwd: string): Promise<string[]> {
 
   if (checkout === null) return [];
 
-  return checkout.files.ok ? rejectionProblems(checkout.root, checkout.files.value) : checkout.files.error;
+  return checkout.files.ok ? await rejectionProblems(checkout.root, checkout.files.value) : checkout.files.error;
 }

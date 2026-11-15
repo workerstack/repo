@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Breaking:** reject files are checked with TypeScript 7, so a `rejects:` mark must quote the error text tsc 7 prints
+
 ### Fixed
 
 - removeTree unlocks a locked tree after its first failed removal instead of after ten timed retries, so a locked temp dir on macOS no longer costs 4.5 s

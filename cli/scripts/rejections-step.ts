@@ -20,29 +20,25 @@ function rejectFiles(root: string, packages: readonly string[], touched: readonl
 }
 
 /** `rejections ok`, or `rejections N failed` naming the failing files' count, each problem printed. */
-export function rejectionsStep(turn: Turn): Promise<StepResult | null> {
+export async function rejectionsStep(turn: Turn): Promise<StepResult | null> {
   const listed = rejectFiles(turn.root, turn.packages, owners(turn));
 
   if (!listed.ok) {
-    return Promise.resolve(
-      failed(
-        "rejections failed",
-        listed.error.map((line) => `repo ${turn.command}: ${line}\n`),
-      ),
+    return failed(
+      "rejections failed",
+      listed.error.map((line) => `repo ${turn.command}: ${line}\n`),
     );
   }
 
-  if (listed.files.length === 0) return Promise.resolve(null);
-  const problems = rejectionProblems(turn.root, listed.files);
+  if (listed.files.length === 0) return null;
+  const problems = await rejectionProblems(turn.root, listed.files);
 
-  if (problems.length === 0) return Promise.resolve(passed("rejections ok"));
+  if (problems.length === 0) return passed("rejections ok");
   const failing = listed.files.filter((rel) => problems.some((line) => line.startsWith(`${rel}: `)));
   const label = failing.length === 0 ? "rejections failed" : `rejections ${failing.length} failed`;
 
-  return Promise.resolve(
-    failed(
-      label,
-      problems.map((line) => `repo ${turn.command}: rejections: ${line}\n`),
-    ),
+  return failed(
+    label,
+    problems.map((line) => `repo ${turn.command}: rejections: ${line}\n`),
   );
 }

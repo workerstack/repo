@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 
 import { useTempTree } from "./__fixtures__/temp-tree.ts";
 import { rejectionProblems, rejections } from "./check-rejections.ts";
@@ -10,8 +10,8 @@ import { isString, type JsonObject } from "./json.ts";
 
 const pkgRoot = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 
-/** Each program parses the default lib, over a second on a fast machine. */
-const SLOW = 60_000;
+/** Each test opens a project that parses the default lib, which takes seconds on a loaded machine. */
+vi.setConfig({ testTimeout: 60_000 });
 
 const tree = useTempTree("check-rejections-");
 
@@ -36,7 +36,7 @@ function pkg(dir: string, compilerOptions: JsonObject = {}) {
 }
 
 /** The problems of every planted file. */
-function problemsOf(files: Record<string, string | JsonObject>): string[] {
+function problemsOf(files: Record<string, string | JsonObject>): Promise<string[]> {
   return rejectionProblems(plant(files), Object.keys(files));
 }
 
@@ -94,8 +94,8 @@ const USER_REJECT = [
   "",
 ].join("\n");
 
-it("prints each Usage problem on its statement's line", { timeout: SLOW }, () => {
-  expect(problemsOf({ ...pkg("."), "src/user.reject.ts": USER_REJECT, "src/user.ts": WIDE_USER })).toStrictEqual([
+it("prints each Usage problem on its statement's line", async () => {
+  expect(await problemsOf({ ...pkg("."), "src/user.reject.ts": USER_REJECT, "src/user.ts": WIDE_USER })).toStrictEqual([
     "src/user.reject.ts: line 4 compiles; it must reject: " +
       "Argument of type 'string' is not assignable to parameter of type 'UserId'",
     "src/user.reject.ts: line 6 fails unmarked: TS2552: Cannot find name 'lod'. Did you mean 'load'?",
@@ -104,7 +104,7 @@ it("prints each Usage problem on its statement's line", { timeout: SLOW }, () =>
   ]);
 });
 
-it("passes a file that rejects exactly what it marks, under the owner's strict options", { timeout: SLOW }, () => {
+it("passes a file that rejects exactly what it marks, under the owner's strict options", async () => {
   const branded = WIDE_USER.replace("= string;", '= string & { readonly brand: "UserId" };');
 
   const source = [
@@ -121,18 +121,18 @@ it("passes a file that rejects exactly what it marks, under the owner's strict o
     "",
   ].join("\n");
 
-  expect(problemsOf({ ...pkg("."), "src/user.reject.ts": source, "src/user.ts": branded })).toStrictEqual([]);
+  expect(await problemsOf({ ...pkg("."), "src/user.reject.ts": source, "src/user.ts": branded })).toStrictEqual([]);
 });
 
-it("names the errors of a marked line that fails without its text", { timeout: SLOW }, () => {
+it("names the errors of a marked line that fails without its text", async () => {
   const source = "/* rejects: Property 'nope' does not exist */\nexport const wrong: number = \"two\";\n";
-  expect(problemsOf({ ...pkg("."), "src/a.reject.ts": source })).toStrictEqual([
+  expect(await problemsOf({ ...pkg("."), "src/a.reject.ts": source })).toStrictEqual([
     `src/a.reject.ts: line 2 fails without "Property 'nope' does not exist": ` +
       "TS2322: Type 'string' is not assignable to type 'number'.",
   ]);
 });
 
-it("covers a statement the formatter wrapped through the line before the next blank line", { timeout: SLOW }, () => {
+it("covers a statement the formatter wrapped through the line before the next blank line", async () => {
   const source = [
     "/* rejects: Type 'string' is not assignable to type 'number' */",
     "export const list: number[] = [",
@@ -144,17 +144,17 @@ it("covers a statement the formatter wrapped through the line before the next bl
     "",
   ].join("\n");
 
-  expect(problemsOf({ ...pkg("."), "src/a.reject.ts": source })).toStrictEqual([]);
+  expect(await problemsOf({ ...pkg("."), "src/a.reject.ts": source })).toStrictEqual([]);
 });
 
-it("reports a syntax error as such, never as a marked line that compiles", { timeout: SLOW }, () => {
+it("reports a syntax error as such, never as a marked line that compiles", async () => {
   const source = "/* rejects: anything */\nexport const a: number = ;\n";
-  expect(problemsOf({ ...pkg("."), "src/a.reject.ts": source })).toStrictEqual([
+  expect(await problemsOf({ ...pkg("."), "src/a.reject.ts": source })).toStrictEqual([
     "src/a.reject.ts: line 2 does not parse, so nothing in the file was type-checked: TS1109: Expression expected.",
   ]);
 });
 
-it("checks a .tsx reject file with its owner's jsx option and ambient types", { timeout: SLOW }, () => {
+it("checks a .tsx reject file with its owner's jsx option and ambient types", async () => {
   const jsx =
     "declare namespace JSX {\n  interface Element {}\n" +
     "  interface IntrinsicElements {\n    div: { id?: string };\n  }\n}\n";
@@ -170,10 +170,10 @@ it("checks a .tsx reject file with its owner's jsx option and ambient types", { 
 
   const owner = pkg(".", { jsx: "preserve" });
   const files = { ...owner, "src/jsx.d.ts": jsx, "src/view.reject.tsx": source };
-  expect(problemsOf(files)).toStrictEqual(["src/view.reject.tsx: line 5 compiles; it must reject: anything"]);
+  expect(await problemsOf(files)).toStrictEqual(["src/view.reject.tsx: line 5 compiles; it must reject: anything"]);
 });
 
-it("checks each package's reject files under that package's own options", { timeout: SLOW }, () => {
+it("checks each package's reject files under that package's own options", async () => {
   const source = [
     "export type Opt = { a?: number };",
     "/* rejects: with 'exactOptionalPropertyTypes: true' */",
@@ -189,42 +189,54 @@ it("checks each package's reject files under that package's own options", { time
     "packages/strict/src/a.reject.ts": source,
   };
 
-  expect(problemsOf(files)).toStrictEqual([
+  expect(await problemsOf(files)).toStrictEqual([
     "packages/loose/src/a.reject.ts: line 3 compiles; it must reject: with 'exactOptionalPropertyTypes: true'",
   ]);
 });
 
-it(
-  "falls back to tsconfig.json without a strict sibling, and to strict defaults with no tsconfig",
-  { timeout: SLOW },
-  () => {
-    const source = [
-      "export type Opt = { a?: number };",
-      "/* rejects: with 'exactOptionalPropertyTypes: true' */",
-      "export const opt: Opt = { a: undefined };",
-      "",
-    ].join("\n");
+it("falls back to tsconfig.json without a strict sibling, and to strict defaults with no tsconfig", async () => {
+  const source = [
+    "export type Opt = { a?: number };",
+    "/* rejects: with 'exactOptionalPropertyTypes: true' */",
+    "export const opt: Opt = { a: undefined };",
+    "",
+  ].join("\n");
 
-    const runtime = pkg("packages/runtime");
-    delete runtime["packages/runtime/tsconfig.src.json"];
-    const bare = "/* rejects: Type 'string' is not assignable to type 'number' */\nexport const n: number = 'x';\n";
-    expect(
-      problemsOf({ ...runtime, "packages/runtime/src/a.reject.ts": source, "scratch/a.reject.ts": bare }),
-    ).toStrictEqual([
-      "packages/runtime/src/a.reject.ts: line 3 compiles; it must reject: with 'exactOptionalPropertyTypes: true'",
-    ]);
-  },
-);
-
-it("skips a listed reject file that no longer exists", { timeout: SLOW }, () => {
-  expect(rejectionProblems(plant(pkg(".")), ["src/gone.reject.ts"])).toStrictEqual([]);
+  const runtime = pkg("packages/runtime");
+  delete runtime["packages/runtime/tsconfig.src.json"];
+  const bare = "/* rejects: Type 'string' is not assignable to type 'number' */\nexport const n: number = 'x';\n";
+  expect(
+    await problemsOf({ ...runtime, "packages/runtime/src/a.reject.ts": source, "scratch/a.reject.ts": bare }),
+  ).toStrictEqual([
+    "packages/runtime/src/a.reject.ts: line 3 compiles; it must reject: with 'exactOptionalPropertyTypes: true'",
+  ]);
 });
 
-it("names a tsconfig.src.json it cannot read", () => {
+it("skips a listed reject file that no longer exists", async () => {
+  expect(await rejectionProblems(plant(pkg(".")), ["src/gone.reject.ts"])).toStrictEqual([]);
+});
+
+it("names a tsconfig.src.json it cannot read", async () => {
   const files = { "src/a.reject.ts": "", "tsconfig.json": "{}", "tsconfig.src.json": '{ "include": ["src"]\n' };
-  expect(problemsOf(files)).toStrictEqual(["tsconfig.src.json: '}' expected."]);
+  expect(await problemsOf(files)).toStrictEqual(["tsconfig.src.json: '}' expected."]);
 });
 
-it("ignores files that are not reject files", () => {
-  expect(problemsOf({ ...pkg("."), "src/a.ts": "export const a: number = 'x';\n" })).toStrictEqual([]);
+it("ignores files that are not reject files", async () => {
+  expect(await problemsOf({ ...pkg("."), "src/a.ts": "export const a: number = 'x';\n" })).toStrictEqual([]);
+});
+
+/** A function whose inferred return type names a value the file does not export, which no declaration can write. */
+const PRIVATE_RETURN = ["const a = { x: 1 };", "", "export function make() {", "  return a;", "}", ""].join("\n");
+
+const PRIVATE_MARK =
+  "/* rejects: TS9039: Type containing private name 'a' can't be used with --isolatedDeclarations. */\n";
+
+it("reads declaration errors only when the owner emits declarations", async () => {
+  const emits = { ...pkg("."), "src/a.reject.ts": PRIVATE_RETURN.replace("export", `${PRIVATE_MARK}export`) };
+  // The strict sibling sets `declaration`, so only the runtime config can leave it off.
+  const runtime = pkg(".", { declaration: false, isolatedDeclarations: true });
+  delete runtime["tsconfig.src.json"];
+
+  expect(await problemsOf(emits)).toStrictEqual([]);
+  expect(await problemsOf({ ...runtime, "src/a.reject.ts": PRIVATE_RETURN })).toStrictEqual([]);
 });

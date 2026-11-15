@@ -2,7 +2,7 @@
 import fs from "node:fs";
 
 import { parse, type ParseError } from "jsonc-parser";
-import { API, type CompilerOptions } from "typescript/unstable/async";
+import { API, type CompilerOptions, type Diagnostic, type Project } from "typescript/unstable/async";
 
 import type { Result } from "./result.ts";
 import { errorMessage } from "./sync-errors.ts";
@@ -16,19 +16,100 @@ const SYNTAX_ERRORS = { from: 1000, to: 2000 };
 /** Everything after the first line of a message: a tsgo panic carries its Go stack below it. */
 const FIRST_LINE_REST = /\n[\s\S]*/;
 
-/** Runs `work` on one API rooted at `cwd`, then closes it, which ends its tsgo process whether `work` threw or not. */
-export async function withTsApi<T>(cwd: string, work: (api: API) => Promise<T>): Promise<T> {
-  const api = new API({ cwd });
+/**
+ * One open API and the configs it reads from memory, by posix path, before the disk. `opened` counts the configs
+ * withFiles has made, so no two on one API share a name.
+ */
+export type TsRun = { readonly api: API; readonly virtual: Map<string, string>; opened: number };
+
+/** Which files withFiles checks, in which dir, under the config there it extends; null checks them under defaults. */
+export type FilesSpec = Readonly<{ dir: string; base: string | null; files: readonly string[] }>;
+
+/** The options a file with no tsconfig.json above it is checked with: strict, resolved as a bundler would. */
+const NO_OWNER_OPTIONS = {
+  allowImportingTsExtensions: true,
+  module: "preserve",
+  moduleResolution: "bundler",
+  noEmit: true,
+  skipLibCheck: true,
+  strict: true,
+  target: "esnext",
+} as const;
+
+/** The indent each level of a chained message adds, as tsc prints it on one line. */
+const CHAIN_INDENT = "  ";
+
+/**
+ * Runs `work` on one API rooted at `cwd`, then closes it, which ends its tsgo process whether `work` threw or not.
+ * The API reads a file in `virtual` from there, and every other file from disk.
+ */
+export async function withTsApi<T>(cwd: string, work: (run: TsRun) => Promise<T>): Promise<T> {
+  const virtual = new Map<string, string>();
+  const api = new API({ cwd, fs: { readFile: (file) => virtual.get(file) } });
 
   try {
-    return await work(api);
+    return await work({ api, opened: 0, virtual });
   } finally {
     await api.close();
   }
 }
 
+/** The text of the config withFiles opens: `base`'s options, or the defaults, over exactly the listed files. */
+function filesConfig(spec: FilesSpec): string {
+  const options = spec.base === null ? { compilerOptions: NO_OWNER_OPTIONS } : { compilerOptions: { noEmit: true } };
+  const base = spec.base === null ? {} : { extends: `./${spec.base}` };
+
+  return JSON.stringify({ ...base, ...options, files: spec.files, include: [] });
+}
+
+/**
+ * Runs `work` on a project of `spec`'s files from a config in memory, then closes the project and forgets the config,
+ * whether `work` threw or not. A listed file that is gone is not in the project.
+ */
+export async function withFiles<T>(run: TsRun, spec: FilesSpec, work: (project: Project) => Promise<T>): Promise<T> {
+  run.opened += 1;
+  const config = `${spec.dir}/tsconfig.repo-${run.opened}.json`;
+  run.virtual.set(config, filesConfig(spec));
+
+  try {
+    const snapshot = await run.api.updateSnapshot({ openProjects: [config] });
+
+    try {
+      const project = snapshot.getProject(config);
+
+      if (project === undefined) throw new Error(`TypeScript opened no project for ${config}`);
+
+      return await work(project);
+    } finally {
+      await snapshot.dispose();
+      const closed = await run.api.updateSnapshot({ closeProjects: [config] });
+      await closed.dispose();
+    }
+  } finally {
+    run.virtual.delete(config);
+  }
+}
+
+/** A chained message's text: each level on the same line, two more spaces in for each level down. */
+function chainText(diagnostic: Diagnostic, depth: number): string {
+  const lead = depth === 0 ? "" : ` ${CHAIN_INDENT.repeat(depth)}`;
+  const next = (diagnostic.messageChain ?? []).map((link) => chainText(link, depth + 1));
+
+  return [`${lead}${diagnostic.text}`, ...next].join("");
+}
+
+/** A diagnostic as `TS<code>: <text>`, its chain flattened onto one line as tsc prints it. */
+export function messageOf(diagnostic: Diagnostic): string {
+  return `TS${diagnostic.code}: ${chainText(diagnostic, 0)}`;
+}
+
+/** The one-based line of offset `pos` in `text`. */
+export function lineOf(text: string, pos: number): number {
+  return text.slice(0, pos).split("\n").length;
+}
+
 /** The first line of what the API threw: a file it cannot read, or a tsgo panic on a config it cannot parse. */
-async function parsed(api: API, file: string): Promise<Result<TsConfig, string>> {
+async function parsed({ api }: TsRun, file: string): Promise<Result<TsConfig, string>> {
   try {
     return { ok: true, value: await api.parseConfigFile(file) };
   } catch (error) {
@@ -40,7 +121,7 @@ async function parsed(api: API, file: string): Promise<Result<TsConfig, string>>
  * The text of the first JSON syntax error in `file` itself; a config it extends reports its own. A config removed
  * after its parse opens no project and has none.
  */
-async function syntaxError(api: API, file: string): Promise<string | undefined> {
+async function syntaxError({ api }: TsRun, file: string): Promise<string | undefined> {
   const snapshot = await api.updateSnapshot({ openProjects: [file] });
 
   try {
@@ -78,11 +159,11 @@ function looksBroken(file: string): boolean {
  * later read sees only its own errors. Reads on one API go one at a time: two at once leave a handle that keeps the
  * process alive after close.
  */
-export async function configOf(api: API, file: string): Promise<Result<TsConfig, string>> {
-  const read = await parsed(api, file);
+export async function configOf(run: TsRun, file: string): Promise<Result<TsConfig, string>> {
+  const read = await parsed(run, file);
 
   if (!read.ok || !looksBroken(file)) return read;
-  const syntax = await syntaxError(api, file);
+  const syntax = await syntaxError(run, file);
 
   return syntax === undefined ? read : { error: syntax, ok: false };
 }
