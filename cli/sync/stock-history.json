@@ -5523,7 +5523,13 @@
     "e12242b867dd4549"
   ],
   "cli/scripts/lint-limit.test.ts": ["4ce78cc1611c3956", "e3d4da69019333b2"],
-  "cli/scripts/lint-main-fix.test.ts": ["3f5d3afe31961b63", "58c99c138f2c4a94", "5b7ad354f5e215fc", "c98e0dfedeb656ab"],
+  "cli/scripts/lint-main-fix.test.ts": [
+    "3f5d3afe31961b63",
+    "58c99c138f2c4a94",
+    "5b7ad354f5e215fc",
+    "c98e0dfedeb656ab",
+    "ec0cd514e1f5e578"
+  ],
   "cli/scripts/lint-main.constants.ts": ["1a29acb0ca4af187", "5caf57c00bcb28d9", "90f791060f269c4b"],
   "cli/scripts/lint-main.test.ts": [
     "160b5a998cc794e1",

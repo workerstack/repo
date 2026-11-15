@@ -10,6 +10,7 @@ export const RULES = {
   "repo/boundaries": "error",
   "repo/class-file": "error",
   "repo/config-file": "error",
+  "repo/consistent-type-definitions": "error",
   "repo/deprecated-replacement": "error",
   "repo/entry-file": "error",
   "repo/env-in-config": "error",
@@ -94,7 +95,6 @@ export const RULES = {
   // Keys sort by code point, as `repo fmt` sorts JSON keys; a blank line starts a group, so an object whose key order
   // is read as order keeps it through groups, each with a comment saying why.
   "eslint/sort-keys": ["error", "asc", { allowLineSeparatedGroups: true, caseSensitive: true, natural: false }],
-  "typescript/consistent-type-definitions": ["error", "type"],
   "typescript/consistent-type-imports": "error",
 
   "eslint/func-style": ["error", "declaration", { allowArrowFunctions: false }],
@@ -131,6 +131,8 @@ export const OFF_RULES = {
   "eslint/no-negated-condition": "unicorn/no-negated-condition owns it and also covers ternaries.",
   "eslint/no-ternary": "eslint/no-nested-ternary already bounds ternaries, and a single one reads well.",
   "eslint/one-var": "One declaration per statement reads better than a chained declaration.",
+  "typescript/consistent-type-definitions": `Its fixer rewrites code it cannot know \
+is safe: an augmenting interface cannot become a type; repo/consistent-type-definitions owns it.`,
   "typescript/explicit-function-return-type":
     "Inference of the return type is exact, so writing it out only repeats it.",
   "typescript/no-unsafe-type-assertion": `repo/as-needs-reason owns \`as\` (a narrowing assertion takes a \
@@ -138,6 +140,8 @@ reason comment), and disable comments are refused, so this rule would leave no w
   "typescript/prefer-optional-chain": "It is a nursery rule whose autofix is dangerous.",
   "typescript/prefer-readonly-parameter-types": "It fails parameters of library types the repo cannot make readonly.",
   "unicorn/no-null": "JSON and the tsgo APIs return null, so the code has to handle it.",
+  "vitest/prefer-called-with": `Its fixer rewrites code it cannot know \
+is safe: lint cannot know a call's arguments; repo/prefer-called-with owns it.`,
   "vitest/prefer-expect-assertions": "vitest/expect-expect already checks that an assertion ran in each test.",
   "vitest/require-test-timeout": "The vitest config sets the timeout for every test.",
 } as const;
@@ -146,11 +150,11 @@ reason comment), and disable comments are refused, so this rule would leave no w
 export const TEST_RULES = {
   "eslint/no-console": "off",
   "repo/no-module-state": "off",
+  "repo/prefer-called-with": "error",
   "vitest/expect-expect": "error",
   "vitest/no-conditional-tests": "error",
   "vitest/no-disabled-tests": "error",
   "vitest/no-focused-tests": "error",
-  "vitest/prefer-called-with": "error",
   "vitest/prefer-strict-equal": "error",
   "vitest/warn-todo": "error",
 } as const;

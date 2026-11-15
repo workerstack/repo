@@ -58,3 +58,41 @@ it("lint --fix runs a single pass where git lists no files", { timeout: SLOW }, 
   await lintMain(["--fix", "src/a.ts"]);
   expect(read()).toBe(ONE_PASS);
 });
+
+const AUGMENT = [
+  'import type { Mock } from "vitest";',
+  "",
+  'declare module "vitest/browser" {',
+  "  interface BrowserCommands {",
+  "    serverRender: Mock;",
+  "  }",
+  "}",
+  "",
+].join("\n");
+
+const CALLED_TEST = [
+  'import { expect, it, vi } from "vitest";',
+  "",
+  'it("calls", () => {',
+  "  const f = vi.fn();",
+  "  f();",
+  "  expect(f).toHaveBeenCalled();",
+  "});",
+  "",
+].join("\n");
+
+it(
+  "lint --fix leaves an augmenting interface and a bare toHaveBeenCalled as written and names the latter",
+  { timeout: SLOW },
+  async () => {
+    const root = consumer({ "src/a.test.ts": CALLED_TEST, "src/augment.ts": AUGMENT });
+    const output = spies();
+    process.chdir(root);
+    await lintMain(["--fix", "src/augment.ts", "src/a.test.ts"]);
+    expect(fs.readFileSync(path.join(root, "src/augment.ts"), "utf8")).toBe(AUGMENT);
+    expect(fs.readFileSync(path.join(root, "src/a.test.ts"), "utf8")).toBe(CALLED_TEST);
+    const printed = [...output.stdout(), ...output.stderr()].join("");
+    expect(printed).toContain("repo(prefer-called-with)");
+    expect(printed).not.toContain("consistent-type-definitions");
+  },
+);

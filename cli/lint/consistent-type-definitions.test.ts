@@ -1,0 +1,50 @@
+import { describe, expect, it } from "vitest";
+
+import { fixedOf, reportsOf } from "../../dev/rule-harness.ts";
+import { consistentTypeDefinitions } from "./consistent-type-definitions.ts";
+
+function countOf(code: string): number {
+  return reportsOf(consistentTypeDefinitions, { "a.ts": code }).length;
+}
+
+describe("consistent-type-definitions", () => {
+  it.each([
+    ['declare module "x" {\n  interface A {\n    a: string;\n  }\n}\n\nexport {};\n'],
+    ["declare global {\n  interface Window {\n    a: string;\n  }\n}\n\nexport {};\n"],
+    ["declare namespace N {\n  interface A {\n    a: string;\n  }\n}\n\nexport {};\n"],
+    ["interface A {\n  a: string;\n}\n"],
+  ])("does not report or fix an interface that may augment: %j", (code) => {
+    expect(countOf(code)).toBe(0);
+    expect(fixedOf(consistentTypeDefinitions, code)).toBe(code);
+  });
+});
+
+describe("consistent-type-definitions fixes", () => {
+  it("rewrites a plain exported generic interface in a module", () => {
+    const code = "export interface Box<T> { value: T }\n";
+    expect(countOf(code)).toBe(1);
+    expect(fixedOf(consistentTypeDefinitions, code)).toBe("export type Box<T> = { value: T };\n");
+  });
+
+  it("rewrites an interface that extends as an intersection", () => {
+    const code = "export interface A { a: string }\nexport interface B extends A { b: number }\n";
+    expect(countOf(code)).toBe(2);
+    expect(fixedOf(consistentTypeDefinitions, code)).toBe(
+      "export type A = { a: string };\nexport type B = A & { b: number };\n",
+    );
+  });
+
+  it("rewrites a generic interface that extends, keeping its type parameters", () => {
+    const code = "export interface A { a: string }\nexport interface C<T> extends A { c: T }\n";
+    expect(countOf(code)).toBe(2);
+    expect(fixedOf(consistentTypeDefinitions, code)).toBe(
+      "export type A = { a: string };\nexport type C<T> = A & { c: T };\n",
+    );
+  });
+
+  it("reports an exported default interface and does not fix it", () => {
+    const code = "export default interface A { a: string }\n";
+    expect(countOf(code)).toBe(1);
+    expect(fixedOf(consistentTypeDefinitions, code)).toBe(code);
+  });
+});

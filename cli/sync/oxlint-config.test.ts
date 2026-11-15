@@ -33,7 +33,8 @@ const CATEGORIES = Object.fromEntries(
 
 /** Every rule the base sets to a bare "error". */
 const ERROR_RULES = [
-  "repo/as-needs-reason repo/boundaries repo/class-file repo/config-file repo/deprecated-replacement repo/entry-file",
+  "repo/as-needs-reason repo/boundaries repo/class-file repo/config-file repo/consistent-type-definitions",
+  "repo/deprecated-replacement repo/entry-file",
   "repo/env-in-config repo/filename-matches-export repo/index-file repo/max-line-width repo/member-ordering",
   "repo/naming-convention repo/native-path-separator repo/no-block-comment repo/no-boolean-param",
   "repo/no-chained-type-assertions repo/no-commented-out-code repo/no-known-value-widening repo/no-module-mocking",
@@ -61,7 +62,8 @@ const REJECTED = [
   "eslint/one-var eslint/id-length typescript/prefer-readonly-parameter-types",
   "typescript/explicit-function-return-type unicorn/no-null eslint/no-ternary vitest/prefer-expect-assertions",
   "vitest/require-test-timeout eslint/no-magic-numbers typescript/prefer-optional-chain",
-  "eslint/no-negated-condition typescript/no-unsafe-type-assertion",
+  "eslint/no-negated-condition typescript/no-unsafe-type-assertion typescript/consistent-type-definitions",
+  "vitest/prefer-called-with",
 ]
   .join(" ")
   .split(" ");
@@ -79,7 +81,6 @@ const OPTION_RULES = {
   "eslint/max-params": ["error", { max: 3 }],
   "eslint/sort-keys": ["error", "asc", { allowLineSeparatedGroups: true, caseSensitive: true, natural: false }],
   "typescript/consistent-type-assertions": ["error", { assertionStyle: "as", objectLiteralTypeAssertions: "allow" }],
-  "typescript/consistent-type-definitions": ["error", "type"],
   "typescript/strict-boolean-expressions": [
     "error",
     { allowNullableObject: false, allowNumber: false, allowString: false },
@@ -100,11 +101,11 @@ const TEST_OVERRIDE = {
     "eslint/no-console": "off",
     "repo/no-module-side-effects": "off",
     "repo/no-module-state": "off",
+    "repo/prefer-called-with": "error",
     "vitest/expect-expect": "error",
     "vitest/no-conditional-tests": "error",
     "vitest/no-disabled-tests": "error",
     "vitest/no-focused-tests": "error",
-    "vitest/prefer-called-with": "error",
     "vitest/prefer-strict-equal": "error",
     "vitest/warn-todo": "error",
   },

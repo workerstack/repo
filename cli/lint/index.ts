@@ -8,6 +8,7 @@ import { asNeedsReason } from "./as-needs-reason.ts";
 import { boundaries } from "./boundaries.ts";
 import { classFile } from "./class-file.ts";
 import { configFile } from "./config-file.ts";
+import { consistentTypeDefinitions } from "./consistent-type-definitions.ts";
 import { deprecatedReplacement } from "./deprecated-replacement.ts";
 import { entryFile } from "./entry-file.ts";
 import { envInConfig } from "./env-in-config.ts";
@@ -37,6 +38,7 @@ import { noUnknownTypeAliases } from "./no-unknown-type-aliases.ts";
 import { noUnsafeDictionaryType } from "./no-unsafe-dictionary-type.ts";
 import { noV8Ignore } from "./no-v8-ignore.ts";
 import { noWidenThenAssert } from "./no-widen-then-assert.ts";
+import { preferCalledWith } from "./prefer-called-with.ts";
 import { publicJsdoc } from "./public-jsdoc.ts";
 import { requireReadableSpacing } from "./require-readable-spacing.ts";
 import { skipOnPlatform } from "./skip-on-platform.ts";
@@ -63,6 +65,7 @@ const plugin: TSESLint.FlatConfig.Plugin & {
     boundaries,
     "class-file": classFile,
     "config-file": configFile,
+    "consistent-type-definitions": consistentTypeDefinitions,
     "deprecated-replacement": deprecatedReplacement,
     "entry-file": entryFile,
     "env-in-config": envInConfig,
@@ -92,6 +95,7 @@ const plugin: TSESLint.FlatConfig.Plugin & {
     "no-unsafe-dictionary-type": noUnsafeDictionaryType,
     "no-v8-ignore": noV8Ignore,
     "no-widen-then-assert": noWidenThenAssert,
+    "prefer-called-with": preferCalledWith,
     "public-jsdoc": publicJsdoc,
     "require-readable-spacing": requireReadableSpacing,
     "skip-on-platform": skipOnPlatform,
