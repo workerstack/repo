@@ -114,7 +114,7 @@ describe("the unignored config", () => {
       workspace: ws,
     });
 
-    expect(seen).toBe(knipConfig(ws, []));
+    expect(seen).toBe(knipConfig(ws, { ignores: [], listed: null, plugins: [] }));
     expect(fs.existsSync(path.join(ws.root, name))).toBe(false);
     expect(out.problems).toHaveLength(1);
   });

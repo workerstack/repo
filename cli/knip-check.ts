@@ -23,6 +23,7 @@ import {
 import type { KnipIgnore } from "./knip-schema.ts";
 import { captureBun, type Captured } from "./scripts/lint.ts";
 import { standardsWorkspace } from "./standards-workspace.ts";
+import { listedFiles } from "./sync/git-files.ts";
 import { KNIP_CONFIG_PATH, knipConfig, knipUnignoredPath } from "./sync/knip-config.ts";
 import type { Workspace } from "./sync/workspace.ts";
 
@@ -145,7 +146,7 @@ async function runUnignored(workspace: Workspace, run: KnipRun, plugins: readonl
   const file = path.join(workspace.root, name);
 
   try {
-    fs.writeFileSync(file, knipConfig(workspace, [], plugins));
+    fs.writeFileSync(file, knipConfig(workspace, { ignores: [], listed: listedFiles(workspace.root, []), plugins }));
 
     return await run(["--config", name, "--no-exit-code", "--reporter", "json"], workspace.root);
   } finally {

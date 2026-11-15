@@ -5,7 +5,7 @@ import path from "node:path";
 import { PRINT_WIDTH } from "../lint/max-line-width.constants.ts";
 import { canonicalPath } from "../scripts/workspace-root.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
-import { GIT_FILE_PATHS } from "./git-files.ts";
+import { GIT_FILE_PATHS, listedFiles } from "./git-files.ts";
 import { gitHooks, HOOK_PATHS } from "./git-hooks.ts";
 import { JSON_INDENT } from "./json.constants.ts";
 import { KNIP_CONFIG_PATH, knipConfig } from "./knip-config.ts";
@@ -79,7 +79,11 @@ export function standards(ctx: SyncContext, outputs: readonly Output[]): ReturnT
       untrackedFile(OXLINT_CONFIG_PATH, oxlint.value),
       untrackedFile(
         KNIP_CONFIG_PATH,
-        knipConfig(ctx.workspace, ctx.config.knip.ignore, Object.values(ctx.config.lint.plugins)),
+        knipConfig(ctx.workspace, {
+          ignores: ctx.config.knip.ignore,
+          listed: listedFiles(ctx.root, []),
+          plugins: Object.values(ctx.config.lint.plugins),
+        }),
       ),
       untrackedFile(
         OXFMT_CONFIG_PATH,

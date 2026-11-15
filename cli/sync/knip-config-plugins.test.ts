@@ -25,7 +25,7 @@ it("makes each plugin file an entry of the workspace holding it, relative to tha
 
   const plugins = ["lint/app.js", "packages/api/lint/a.mjs", "packages/api/inner/lint/b.ts", "packages/apix/c.js"];
 
-  expect(generated.parse(JSON.parse(knipConfig(ws, [], plugins)))).toMatchObject({
+  expect(generated.parse(JSON.parse(knipConfig(ws, { ignores: [], listed: null, plugins })))).toMatchObject({
     workspaces: {
       ".": { entry: [...DEFAULT_ENTRIES, "lint/app.js", "packages/apix/c.js"] },
       "packages/api": { entry: [...DEFAULT_ENTRIES, "lint/a.mjs"] },

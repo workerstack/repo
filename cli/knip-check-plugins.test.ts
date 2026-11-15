@@ -26,7 +26,7 @@ it("writes the lint plugin files as entries of the unignored config, so knip doe
   const ws = knipRoot({});
   const runner = reading(ws.root);
   await checkKnip({ ignores: [], plugins: ["lint/app.js"], run: runner, workspace: ws });
-  expect(runner.seen).toStrictEqual([knipConfig(ws, [], ["lint/app.js"])]);
+  expect(runner.seen).toStrictEqual([knipConfig(ws, { ignores: [], listed: null, plugins: ["lint/app.js"] })]);
   expect(runner.seen[0]).toContain('"lint/app.js"');
 });
 

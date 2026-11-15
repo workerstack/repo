@@ -5,7 +5,7 @@ import { isRecord, isString } from "../json.ts";
 import type { KnipIgnore } from "../knip-schema.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
 import { hasOwnedHeader } from "./header.ts";
-import { KNIP_JSON_INDENT, KNIP_SCHEMA_URL, TOOL_LOADED_ENTRIES } from "./knip-config.constants.ts";
+import { KNIP_JSON_INDENT, KNIP_SCHEMA_URL, TOOL_LOADED_GLOBS, TOOL_LOADED_SUFFIXES } from "./knip-config.constants.ts";
 import { FIXTURES } from "./oxlint-config.ts";
 import { PACKAGE_NAME } from "./package-name.constants.ts";
 import { VITEST_CONFIG_PATH } from "./vitest-projects.constants.ts";
@@ -79,10 +79,9 @@ function isGenerated(file: string): boolean {
 const DEFAULT_ENTRIES = [
   "{index,cli,main}.{js,mjs,cjs,jsx,ts,tsx,mts,cts}!",
   "src/{index,cli,main}.{js,mjs,cjs,jsx,ts,tsx,mts,cts}!",
-  ...TOOL_LOADED_ENTRIES,
 ];
 
-/** The suffix of the configs the `*.config.ts` entry glob already holds, so no vitest one is listed twice. */
+/** The suffix of the configs the tool-loaded entries already hold, so no vitest one is listed twice. */
 const TS_CONFIG_SUFFIX = ".config.ts";
 
 type WorkspaceConfig = {
@@ -94,8 +93,8 @@ type WorkspaceConfig = {
   ignoreDependencies?: string[];
 };
 
-/** The entry, vitest and bin settings of one workspace; `extraEntry` is what only its kind adds. */
-function workspaceConfig(root: string, pkg: WorkspacePackage, extraEntry: string[]): WorkspaceConfig {
+/** The entry, vitest and bin settings of one workspace; `extraEntry` is what it adds after knip's defaults. */
+function workspaceConfig(root: string, pkg: WorkspacePackage, extraEntry: readonly string[]): WorkspaceConfig {
   const { dir, manifest } = pkg;
   const configs = vitestConfigs(root, dir);
 
@@ -114,18 +113,43 @@ function holderOf(workspace: Workspace, file: string): string {
   return dirs.toSorted((a, b) => b.length - a.length)[0] ?? ROOT;
 }
 
-/** The entries `plugins` (repo-relative files) add to the workspace at `dir`, each relative to that dir. */
-function pluginEntries(workspace: Workspace, dir: string, plugins: readonly string[]): string[] {
-  return plugins.filter((file) => holderOf(workspace, file) === dir).map((file) => path.posix.relative(dir, file));
+/** The entries `files` (repo-relative) add to the workspace at `dir`, each relative to that dir. */
+function heldEntries(workspace: Workspace, dir: string, files: readonly string[]): string[] {
+  return files.filter((file) => holderOf(workspace, file) === dir).map((file) => path.posix.relative(dir, file));
+}
+
+/** The `*.config.ts` and `*.worker.ts` entries of the workspace at `dir`: the globs when `listed` is null. */
+function toolLoadedEntries(workspace: Workspace, dir: string, listed: readonly string[] | null): readonly string[] {
+  if (listed === null) return TOOL_LOADED_GLOBS;
+
+  const loaded = listed.filter((file) => TOOL_LOADED_SUFFIXES.some((suffix) => file.endsWith(suffix)));
+
+  return heldEntries(workspace, dir, loaded).toSorted(byCodeUnit);
+}
+
+/**
+ * What the config is built from: the `knip.ignore` entries, the files git sees (null outside git), and the
+ * repo-relative files of `lint.plugins`.
+ */
+type KnipSources = Readonly<{
+  ignores: readonly KnipIgnore[];
+  listed: readonly string[] | null;
+  plugins: readonly string[];
+}>;
+
+/** The entries the workspace at `dir` adds after knip's defaults: its tool-loaded files, then its plugin files. */
+function ownEntries(workspace: Workspace, dir: string, { listed, plugins }: KnipSources): string[] {
+  return [...toolLoadedEntries(workspace, dir, listed), ...heldEntries(workspace, dir, plugins)];
 }
 
 /** The root workspace: its own settings and the `ignores`, each as the list knip takes for its kind. */
-function rootConfig(workspace: Workspace, ignores: readonly KnipIgnore[], plugins: readonly string[]): WorkspaceConfig {
+function rootConfig(workspace: Workspace, sources: KnipSources): WorkspaceConfig {
+  const { ignores } = sources;
   const evals = fs.existsSync(path.join(workspace.root, EVALS_DIR)) ? [EVAL_ENTRY] : [];
 
   const base = workspaceConfig(workspace.root, { dir: ROOT, manifest: workspace.manifest }, [
+    ...ownEntries(workspace, ROOT, sources),
     ...evals,
-    ...pluginEntries(workspace, ROOT, plugins),
   ]);
 
   const files = ignores.flatMap((ignore) => ("file" in ignore ? [ignore.file] : []));
@@ -142,28 +166,25 @@ function rootConfig(workspace: Workspace, ignores: readonly KnipIgnore[], plugin
 }
 
 /**
- * The knip config of a workspace: every rule an error, each package dir a workspace of knip's default entries, every
- * `*.config.ts` and `*.worker.ts` file (tools load them by name or path, so nothing imports them), and its own (the
- * root also every `evals/<name>/eval.ts` when it has an `evals/` dir), the vitest configs present read by knip's
- * vitest plugin and an entry where no `*.config.ts` glob holds them, fixtures ignored, a workspace's own bins not
- * reported, and the root carrying `ignores`. `repo check` passes no ignores for its ignore-free run. Each of
- * `plugins`, the repo-relative files of `lint.plugins`, is an entry of the workspace holding it, relative to that
- * workspace's dir.
+ * The knip config of a workspace: every rule an error, each package dir a workspace of knip's default entries, and
+ * each `*.config.ts` and `*.worker.ts` file of `sources.listed` it holds (tools load them by name or path, so nothing
+ * imports them). `listed` is what git sees, so a gitignored one stays out; it is null outside git, where the two
+ * globs stand for them. Then its own entries (the root also every `evals/<name>/eval.ts` when it has an `evals/`
+ * dir), the vitest configs present read by knip's vitest plugin and an entry where they are not `*.config.ts` files,
+ * fixtures ignored, a workspace's own bins not reported, and the root carrying `sources.ignores`. `repo check` passes
+ * no ignores for its ignore-free run. Each of `sources.plugins` is an entry of the workspace holding it, relative to
+ * that workspace's dir.
  */
-export function knipConfig(
-  workspace: Workspace,
-  ignores: readonly KnipIgnore[],
-  plugins: readonly string[] = [],
-): string {
+export function knipConfig(workspace: Workspace, sources: KnipSources): string {
   const config = {
     $schema: KNIP_SCHEMA_URL,
     rules: Object.fromEntries(RULES.map((rule) => [rule, "error"])),
     workspaces: {
-      [ROOT]: rootConfig(workspace, ignores, plugins),
+      [ROOT]: rootConfig(workspace, sources),
       ...Object.fromEntries(
         workspace.packages.map((pkg) => [
           pkg.dir,
-          workspaceConfig(workspace.root, pkg, pluginEntries(workspace, pkg.dir, plugins)),
+          workspaceConfig(workspace.root, pkg, ownEntries(workspace, pkg.dir, sources)),
         ]),
       ),
     },
