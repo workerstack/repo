@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import ts from "typescript";
+import ts from "typescript-5.9";
 
 import { DEFINE_ENV } from "../check-env-values.constants.ts";
 import { seal } from "../env/age.ts";

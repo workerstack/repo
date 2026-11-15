@@ -16,7 +16,6 @@ import {
   PROBE_SOURCE,
   PROJECT_DIR_PREFIX,
   TSC_ARGS,
-  TSC_MODULE,
   TSCONFIG,
   TSCONFIG_FILE,
   TYPE_IMPORT,
@@ -42,12 +41,6 @@ import {
   typeError,
 } from "./release-messages.constants.ts";
 import { tarballLint } from "./tarball-lint.ts";
-
-/** The TypeScript compiler's script from this package's install. */
-export function tscScript(): string {
-  // Bun.resolveSync, not import.meta.resolve: vitest's transform drops the latter, and tests run this in-process.
-  return Bun.resolveSync(TSC_MODULE, import.meta.dirname);
-}
 
 /** Where `repo release consumer` runs and prints, and the tools it works through. */
 export type ConsumerIo = Pick<PackIo, "cwd" | "stdout" | "stderr" | "bun" | "tar" | "tmp" | "mkdtemp" | "list"> & {

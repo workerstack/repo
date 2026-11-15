@@ -8,7 +8,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import ts from "typescript";
+import ts from "typescript-5.9";
 
 import { CONFIG_FILE } from "./config.constants.ts";
 import { type LintSkip } from "./config.ts";

@@ -60,6 +60,20 @@ it("points the editor at the installed TypeScript 7 or later, and at its lib for
   expect(recommendationsFor(standards({ files: typescript("6.0.3") }))).not.toContain("TypeScriptTeam.native-preview");
 });
 
+/** The tsdk path sync leaves in a settings file that held `held`, with typescript `version` installed. */
+function heldAt(version: string, held: string): JsonObject[string] | undefined {
+  const settings = JSON.stringify({ "js/ts.tsdk.path": held });
+
+  return settingsFor(standards({ files: { ...typescript(version), [SETTINGS]: settings } }))["js/ts.tsdk.path"];
+}
+
+it("moves a held tsdk path that sync wrote to the installed TypeScript's, and keeps one the user chose", () => {
+  expect(heldAt("7.0.2", "node_modules/typescript/lib")).toBe("./node_modules/typescript");
+  expect(heldAt("7.0.2", "./node_modules/typescript/lib")).toBe("./node_modules/typescript");
+  expect(heldAt("6.0.3", "./node_modules/typescript")).toBe("./node_modules/typescript/lib");
+  expect(heldAt("7.0.2", "tools/ts/lib")).toBe("tools/ts/lib");
+});
+
 it("sets no TypeScript key when typescript is missing, unreadable or not numeric", () => {
   for (const files of [{}, { "node_modules/typescript/package.json": "{" }, typescript("next")]) {
     const settings = settingsFor(standards({ files }));

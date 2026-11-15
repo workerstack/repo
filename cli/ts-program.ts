@@ -6,7 +6,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import ts from "typescript";
+import ts from "typescript-5.9";
 
 import { FIXTURES_DIR } from "./fixtures.constants.ts";
 import type { Result } from "./result.ts";

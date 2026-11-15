@@ -7,6 +7,10 @@ export const NATIVE_TYPESCRIPT_MAJOR = 7;
 export const DEPRECATED_TSDK_KEY: string = "typescript.tsdk";
 export const TSDK_KEY: string = "js/ts.tsdk.path";
 
+/** The tsdk path sync writes for TypeScript 7 or later, and the lib folder it writes for an older one. */
+export const NATIVE_TSDK_PATH: string = "./node_modules/typescript";
+export const CLASSIC_TSDK_PATH: string = "./node_modules/typescript/lib";
+
 export const TYPESCRIPT_PACKAGE = "node_modules/typescript/package.json";
 export const VITEST_PACKAGE = "node_modules/vitest/package.json";
 

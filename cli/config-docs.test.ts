@@ -1,6 +1,6 @@
 import path from "node:path";
 
-import ts from "typescript";
+import ts from "typescript-5.9";
 import { describe, expect, it } from "vitest";
 
 import { SECTION_PACKS } from "./config-schema.ts";

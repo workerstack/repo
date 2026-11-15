@@ -5,7 +5,7 @@
 import fs from "node:fs";
 
 import { parse } from "jsonc-parser";
-import ts from "typescript";
+import ts from "typescript-5.9";
 import { z } from "zod";
 
 import { dependencyNames } from "./dependency-names.ts";

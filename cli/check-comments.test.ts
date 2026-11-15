@@ -7,6 +7,7 @@ import { expect, it, vi } from "vitest";
 import { useTempTree } from "./__fixtures__/temp-tree.ts";
 import { checkComments, commentProblems, sourceFiles } from "./check-comments.ts";
 import { captureBun } from "./scripts/lint.ts";
+import { tscBin } from "./scripts/package-bin.ts";
 
 const plant = useTempTree("workerstack-comments-");
 
@@ -93,7 +94,7 @@ it("reads the multi-line block form as real tsc does: honored only on the block'
     "last.ts": "/**\n * Some prose first.\n * @ts-ignore */\nexport const a: number = 'a';\n",
   });
 
-  const tsc = path.join(path.dirname(Bun.resolveSync("typescript/package.json", import.meta.dirname)), "bin/tsc");
+  const tsc = tscBin();
 
   async function run(rel: string) {
     const ran = await captureBun([tsc, "--noEmit", "--strict", rel], root);
@@ -101,7 +102,7 @@ it("reads the multi-line block form as real tsc does: honored only on the block'
     return ran.code;
   }
 
-  expect({ first: await run("first.ts"), last: await run("last.ts") }).toStrictEqual({ first: 2, last: 0 });
+  expect({ first: await run("first.ts"), last: await run("last.ts") }).toStrictEqual({ first: 1, last: 0 });
   expect(commentProblems(root, ["last.ts", "first.ts"])).toStrictEqual([`last.ts:3: ${IGNORE}`]);
 }, 30_000);
 

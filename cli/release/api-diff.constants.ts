@@ -1,4 +1,4 @@
-import ts from "typescript";
+import ts from "typescript-5.9";
 
 /** The generated file whose imports put both versions of every subpath in one program. */
 export const ENTRY_FILE: string = "api-entry.ts";

@@ -7,7 +7,7 @@
  */
 import path from "node:path";
 
-import ts from "typescript";
+import ts from "typescript-5.9";
 
 import { isString } from "./json.ts";
 import { posix } from "./ts-program.ts";

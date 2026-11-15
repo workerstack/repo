@@ -3,7 +3,7 @@
  * against a `string`, `any` or `unknown` (a literal union, template literal or branded string passes), and a local
  * `const` copy of one, reported at its declaration. An empty or punctuation-only string passes.
  */
-import ts from "typescript";
+import ts from "typescript-5.9";
 
 import { MAGIC_STRING } from "../script-rules.ts";
 import type { MagicHit } from "./magic-hit.ts";

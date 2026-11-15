@@ -2,7 +2,7 @@
  * The packages a set of declaration files uses: the packages their bare specifiers name, those their
  * `/// <reference types>` directives resolve into, and those that declare an identifier they mention.
  */
-import ts from "typescript";
+import ts from "typescript-5.9";
 
 import type { Locator } from "./package-locator.ts";
 import { BARE_SPECIFIER } from "./type-surface.constants.ts";

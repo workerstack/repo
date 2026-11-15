@@ -3,7 +3,7 @@
  * runs its compile on every call and hides what it matches; a named module const or a constants export says both.
  * A file named `*.constants.ts` passes.
  */
-import ts from "typescript";
+import ts from "typescript-5.9";
 
 import { MAGIC_REGEX } from "../script-rules.ts";
 import type { MagicHit } from "./magic-hit.ts";

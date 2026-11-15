@@ -18,3 +18,9 @@ export function packageBin(manifest: string, name: string): string {
 
   return path.join(path.dirname(manifest), bin);
 }
+
+/** The `tsc` script of the typescript this package installs. */
+export function tscBin(): string {
+  // Bun.resolveSync, not import.meta.resolve: vitest's transform drops the latter, and tests run this in-process.
+  return packageBin(Bun.resolveSync("typescript/package.json", import.meta.dirname), "tsc");
+}

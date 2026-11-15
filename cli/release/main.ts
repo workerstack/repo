@@ -6,8 +6,9 @@ import { removeTree } from "../remove-tree.ts";
 import { repoEnv } from "../repo-env.ts";
 import { runCargo } from "../rust/clippy.ts";
 import { inheritRunner, realSleep, spawnRunner } from "../scripts/ci-wait-run.ts";
+import { tscBin } from "../scripts/package-bin.ts";
 import { releaseApi } from "./api.ts";
-import { releaseConsumer, tscScript } from "./consumer.ts";
+import { releaseConsumer } from "./consumer.ts";
 import { gate } from "./gate.ts";
 import type { Tools } from "./git.ts";
 import { releaseGithub } from "./github.ts";
@@ -82,7 +83,7 @@ export function main(argv: string[]): Promise<number> {
         ...run,
         ...packTools(),
         rm: removeDir,
-        tsc: tscScript(),
+        tsc: tscBin(),
       }),
     );
   }

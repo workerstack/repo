@@ -2,7 +2,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
-import ts from "typescript";
+import ts from "typescript-5.9";
 import { z } from "zod";
 
 import { isRecord, isString } from "./json.ts";

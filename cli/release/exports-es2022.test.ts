@@ -9,12 +9,19 @@ import { z } from "zod";
 import { readJson } from "../json.ts";
 import { removeTree } from "../remove-tree.ts";
 import { SLOW } from "../scripts/__fixtures__/turn-repo.ts";
+import { tscBin } from "../scripts/package-bin.ts";
 import { exportSubpaths } from "./exports.ts";
 
 const ROOT = path.join(import.meta.dirname, "..", "..");
-const TSC = Bun.resolveSync("typescript/lib/tsc.js", ROOT);
+const TSC = tscBin();
 
-/** The consumer job's compiler options: target ES2022 with its default lib, so ES2023 methods do not exist. */
+// The folder that holds @types/bun, so a run in a temp dir finds bun's types too.
+const TYPE_ROOTS = path.dirname(path.dirname(Bun.resolveSync("@types/bun/package.json", ROOT)));
+
+/**
+ * The consumer job's compiler options: target ES2022 with its default lib, so ES2023 methods do not exist. TypeScript 7
+ * loads no `@types` package unless named, and each file here is checked alone, so bun's types are named.
+ */
 const CONSUMER_FLAGS = [
   "--target",
   "ES2022",
@@ -26,13 +33,18 @@ const CONSUMER_FLAGS = [
   "--noEmit",
   "--skipLibCheck",
   "--allowImportingTsExtensions",
+  "--typeRoots",
+  TYPE_ROOTS,
+  "--types",
+  "bun",
 ];
 
 const SOURCE_TYPES = /(?<!\.d)\.ts$/u;
 
 /** The tsc error lines for `files` under the consumer's options, run in `cwd`. */
 function consumerErrors(files: readonly string[], cwd: string): string[] {
-  const run = spawnSync(process.execPath, [TSC, ...CONSUMER_FLAGS, ...files], { cwd, encoding: "utf8" });
+  const args = [TSC, "--ignoreConfig", ...CONSUMER_FLAGS, ...files];
+  const run = spawnSync(process.execPath, args, { cwd, encoding: "utf8" });
 
   return run.stdout
     .split("\n")

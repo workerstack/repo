@@ -2,11 +2,12 @@ import fs from "node:fs";
 import { tempDir, write } from "../../__fixtures__/planted-repo.ts";
 import { spawnRunner } from "../../scripts/ci-wait-run.ts";
 import type { Runner } from "../../scripts/ci-wait.ts";
-import { releaseConsumer, tscScript } from "../consumer.ts";
+import { tscBin } from "../../scripts/package-bin.ts";
+import { releaseConsumer } from "../consumer.ts";
 import { removeTree } from "../../remove-tree.ts";
 
 export const TIMEOUT = 120_000;
-const TSC = tscScript();
+const TSC = tscBin();
 export const PREFIX = "repo release consumer: ";
 export const OK = `${PREFIX}@acme/fx@1.0.0 · 4 exports, 5 subpaths · imports ok · types ok · publint ok · attw ok\n`;
 

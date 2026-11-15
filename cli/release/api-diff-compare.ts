@@ -1,4 +1,4 @@
-import ts from "typescript";
+import ts from "typescript-5.9";
 
 import { isNominal, typeText } from "./api-diff-nominal.ts";
 import type { Ctx } from "./api-diff-nominal.ts";

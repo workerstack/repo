@@ -3878,13 +3878,14 @@
   "cli/scripts/env-edit-plain.test.ts": ["3008a8062809484b", "f9dcf1989ffc19de"],
   "cli/scripts/env-edit-refusals.test.ts": ["4963feb60b8400ec", "f03e44fac4910b0f"],
   "cli/scripts/env-edit-sealed.test.ts": ["a1f79b776bed85de"],
-  "cli/scripts/env-edit.ts": ["51a180c5b8c13072", "52bbc20099689fba", "c6eb90774455afea"],
+  "cli/scripts/env-edit.ts": ["51a180c5b8c13072", "52bbc20099689fba", "6ef877bfb7965b2d", "c6eb90774455afea"],
   "cli/scripts/env-files.ts": [
     "3701b0217975f800",
     "50a587cd3c232019",
     "83836697c99f4e49",
     "9313804ba34c7ab3",
-    "96cd6cd59c726895"
+    "96cd6cd59c726895",
+    "eb4ef5b2b1d69790"
   ],
   "cli/scripts/env-io.test.ts": ["ae3d16899d507e34", "d6c0a8a38a67f798"],
   "cli/scripts/env-io.ts": ["2a23e48ea83f85bd", "d69d7c3273e85cf3"],
@@ -6477,7 +6478,13 @@
   "cli/scripts/osa-distance.test.ts": ["b66a559a143a68bf"],
   "cli/scripts/osa-distance.ts": ["2320d96c618f5fcc"],
   "cli/scripts/package-bin.test.ts": ["25e1b81dc812b5cb", "7b76f73a72154cd2", "c15e44946d49c881", "ef1f5f8def7ea78c"],
-  "cli/scripts/package-bin.ts": ["273e4ba2646739e6", "7747021102b0ddaa", "97def7091f80ed3d", "9c46a6e356d560bd"],
+  "cli/scripts/package-bin.ts": [
+    "273e4ba2646739e6",
+    "7747021102b0ddaa",
+    "97def7091f80ed3d",
+    "9c46a6e356d560bd",
+    "edbf035ad30b3431"
+  ],
   "cli/scripts/parallel-groups.constants.ts": ["505ffb7a469ab32d"],
   "cli/scripts/parallel-groups.test.ts": ["d9830c59b556b81b"],
   "cli/scripts/parallel-groups.ts": ["d1904d21c26b8145", "e7be69b1676010f0"],
@@ -8370,6 +8377,7 @@
   "cli/scripts/turn.ts": [
     "07be63859ab6744b",
     "1d63c9b330c4b911",
+    "21f7c0ca0162d34e",
     "260a427077560c39",
     "34c2ae4e1aa9692b",
     "38272a86146319ef",
@@ -8415,6 +8423,7 @@
     "3bd85dd37891a7e8",
     "508b3072c8c57750",
     "647d7df30a43c573",
+    "6b1a6d44bbd0afde",
     "81c4726f5ce0601b",
     "866af4447d748118",
     "b0fd68fc4468701c",

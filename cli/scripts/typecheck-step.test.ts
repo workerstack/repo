@@ -130,8 +130,8 @@ it(
     expect(result.out).toBe("turn: 1 file · fmt ok · lint ok · comments ok · typecheck failed (tsconfig.src.json)\n");
     // tsc ends its lines with the platform's EOL.
     expect(result.err.replaceAll("\r\n", "\n")).toBe(
-      "src/size.ts(1,17): error TS9007: Function must have an explicit return type annotation " +
-        "with --isolatedDeclarations.\n",
+      "src/size.ts(2,10): error TS9039: Type containing private name 's.length' can't be used with " +
+        "--isolatedDeclarations.\n",
     );
     expect(result.code).toBe(1);
     const store = fs.readdirSync(path.join(root, ".repo/tmp/tsbuildinfo")).toSorted();

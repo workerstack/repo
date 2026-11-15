@@ -7,7 +7,7 @@
  */
 import path from "node:path";
 
-import ts from "typescript";
+import ts from "typescript-5.9";
 
 import { packageLocator } from "./package-locator.ts";
 import type { PackageJson } from "./sync/workspace.ts";

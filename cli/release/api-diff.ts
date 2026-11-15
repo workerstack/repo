@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import ts from "typescript";
+import ts from "typescript-5.9";
 
 import { classify } from "./api-diff-compare.ts";
 import type { Ctx } from "./api-diff-nominal.ts";

@@ -6,6 +6,8 @@ import {
   BUN_FORMAT_COMMAND,
   BUN_FORMAT_LANGUAGES,
   BUN_FORMATTER_EXTENSION,
+  CLASSIC_TSDK_PATH,
+  NATIVE_TSDK_PATH,
   NATIVE_TYPESCRIPT_EXTENSION,
   NATIVE_TYPESCRIPT_MAJOR,
   OXC_EXTENSION,
@@ -40,11 +42,11 @@ const TAILWIND_SETTINGS = {
 
 const NATIVE_TYPESCRIPT_SETTINGS = {
   "js/ts.experimental.useTsgo": true,
-  "js/ts.tsdk.path": "./node_modules/typescript",
+  "js/ts.tsdk.path": NATIVE_TSDK_PATH,
 } satisfies JsonObject;
 
 const CLASSIC_TYPESCRIPT_SETTINGS = {
-  "js/ts.tsdk.path": "./node_modules/typescript/lib",
+  "js/ts.tsdk.path": CLASSIC_TSDK_PATH,
 } satisfies JsonObject;
 
 const NONE: VscodeDefaults = { recommendations: [], settings: {} };

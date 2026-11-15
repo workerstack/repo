@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import ts from "typescript";
+import ts from "typescript-5.9";
 
 import type { Result } from "./result.ts";
 import { codeOf, GUARD_REJECTS } from "./script-rules.ts";

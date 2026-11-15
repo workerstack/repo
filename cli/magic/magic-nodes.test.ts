@@ -1,4 +1,4 @@
-import ts from "typescript";
+import ts from "typescript-5.9";
 import { expect, it } from "vitest";
 
 import { isMeaningful } from "./magic-nodes.ts";

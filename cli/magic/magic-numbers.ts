@@ -4,7 +4,7 @@
  * that scales. A schema bound, an argument of `.max(…)` and its kin on a value with a `parse` method, must be a
  * constant imported from a constants file or package.
  */
-import ts from "typescript";
+import ts from "typescript-5.9";
 
 import { MAGIC_NUMBER } from "../script-rules.ts";
 import type { MagicHit } from "./magic-hit.ts";

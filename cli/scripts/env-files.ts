@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import ts from "typescript";
+import ts from "typescript-5.9";
 import { z } from "zod";
 
 import { DEFINE_ENV, DEFINE_ENV_CALL, SCANNED_EXTENSIONS } from "../check-env-values.constants.ts";

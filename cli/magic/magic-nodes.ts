@@ -1,5 +1,5 @@
 /** What both magic checks ask of a syntax node: a const's string, where a hit sits, and the constants homes. */
-import ts from "typescript";
+import ts from "typescript-5.9";
 
 import type { MagicHit } from "./magic-hit.ts";
 

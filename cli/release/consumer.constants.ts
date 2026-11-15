@@ -26,7 +26,6 @@ export const PROBE_INPUT: string = "probe-input.json";
 export const PROBE_OUTPUT: string = "probe-output.json";
 export const TYPES_FILE: string = "consumer.ts";
 export const TSCONFIG_FILE: string = "tsconfig.json";
-export const TSC_MODULE: string = "typescript/lib/tsc.js";
 
 export function TSC_ARGS(tsc: string): string[] {
   return [tsc, "-p", TSCONFIG_FILE];

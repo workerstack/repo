@@ -19,7 +19,7 @@ import { changeSet, type Change, type Scope } from "./change-set.ts";
 import { commentsStep } from "./comments-step.ts";
 import { capture, captureBun } from "./lint.ts";
 import { missingNode, nodeRangesAt, type NodeRanges, vitestCommand } from "./node-run.ts";
-import { packageBin } from "./package-bin.ts";
+import { tscBin } from "./package-bin.ts";
 import { hasPass, passKeys, recordPasses } from "./pass-cache.ts";
 import { rejectionsStep } from "./rejections-step.ts";
 import { stockHistoryStep } from "./stock-history-step.ts";
@@ -77,11 +77,7 @@ export function vitestBin(ranges: NodeRanges): Bins["vitest"] {
 
 /** typescript from this package's install; vitest from the package being tested, as its own tests would run. */
 export const BINS: Bins = {
-  tsc: async (args, cwd) =>
-    await captureBun(
-      [packageBin(Bun.resolveSync("typescript/package.json", import.meta.dirname), "tsc"), ...args],
-      cwd,
-    ),
+  tsc: async (args, cwd) => await captureBun([tscBin(), ...args], cwd),
   vitest: (args, cwd, run) => {
     const ranges = nodeRangesAt(cwd);
 

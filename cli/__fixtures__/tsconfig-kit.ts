@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import ts from "typescript";
+import ts from "typescript-5.9";
 import { expect } from "vitest";
 
 import { tempDir, useTempDirs } from "../sync/__fixtures__/temp-dirs.ts";
