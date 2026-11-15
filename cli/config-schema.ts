@@ -136,7 +136,7 @@ type BaseSchema = z.ZodObject<
     commit: z.ZodOptional<ReturnType<typeof commitSchema>>;
     coverage: z.ZodOptional<typeof coverageSchema>;
     knip: z.ZodOptional<ReturnType<typeof knipSchema>>;
-    link: z.ZodOptional<ReturnType<typeof linkSchema>>;
+    link: ReturnType<typeof linkSchema>;
     lint: z.ZodOptional<ReturnType<typeof lintSchema>>;
     nightly: z.ZodOptional<typeof nightlySchema>;
     owner: z.ZodOptional<ReturnType<typeof ownerSchema>>;
@@ -158,7 +158,7 @@ function baseConfigSchema(): BaseSchema {
       commit: commitSchema().optional(),
       coverage: coverageSchema.optional(),
       knip: knipSchema().optional(),
-      link: linkSchema().optional(),
+      link: linkSchema(),
       lint: lintSchema().optional(),
       nightly: nightlySchema.optional(),
       owner: ownerSchema().optional(),

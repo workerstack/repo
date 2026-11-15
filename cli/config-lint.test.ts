@@ -44,7 +44,7 @@ it("lint.skip: Usage's config resolves to its skip entries", async () => {
       commit: COMMIT,
       coverage: COVERAGE,
       knip: KNIP,
-      link: undefined,
+      link: { paths: {}, push: "block" },
       lint: { plugins: {}, rules: [], skip: [SKIP] },
       nightly: NIGHTLY,
       owner: undefined,

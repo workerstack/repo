@@ -75,22 +75,44 @@ it("turbo.tasks: refuses an unknown task key, a bad flag, a bad list and a turbo
   expect(await loadConfig(repo(tasks("1")))).toMatchObject({ ok: false });
 });
 
-it("link: parses a package-to-checkout map, and leaves it out when omitted", async () => {
-  const map = { "@workerstack/flare": "../flare-wt" };
-  const loaded = await loadConfig(repo(`export default { link: ${JSON.stringify(map)} }\n`));
-  expect(loaded).toMatchObject({ config: { link: map }, ok: true });
-  const omitted = await loadConfig(repo("export default {}\n"));
-  expect(omitted).toMatchObject({ config: { link: undefined }, ok: true });
+const LINK_PATHS = { "@acme/ui": "../ui" };
+
+describe("link", () => {
+  it("parses the paths and push, and fills both when omitted", async () => {
+    const allow = { paths: LINK_PATHS, push: "allow" };
+    const given = await loadConfig(repo(`export default { link: ${JSON.stringify(allow)} }\n`));
+    expect(given).toMatchObject({ config: { link: allow }, ok: true });
+    const pathsOnly = await loadConfig(repo(`export default { link: ${JSON.stringify({ paths: LINK_PATHS })} }\n`));
+    expect(pathsOnly).toMatchObject({ config: { link: { paths: LINK_PATHS, push: "block" } }, ok: true });
+    const omitted = await loadConfig(repo("export default {}\n"));
+    expect(omitted).toMatchObject({ config: { link: { paths: {}, push: "block" } }, ok: true });
+  });
 });
 
-it("link: refuses a value that is not a path", async () => {
-  const loaded = await loadConfig(repo('export default { link: { "@workerstack/flare": 1 } }\n'));
-  expect(loaded).toStrictEqual(
-    refusal("link.@workerstack/flare: must be a path like ../flare, relative to the repo root"),
-  );
-  expect(await loadConfig(repo("export default { link: [] }\n"))).toStrictEqual(
-    refusal('link: must be an object like { "@workerstack/flare": "../flare" }'),
-  );
+describe("link refusals", () => {
+  it("refuses a push value that is not block or allow", async () => {
+    expect(await loadConfig(repo('export default { link: { push: "yes" } }\n'))).toStrictEqual(
+      refusal('link.push: must be "block" or "allow"'),
+    );
+  });
+
+  it("refuses a package path outside link.paths as an unknown key", async () => {
+    expect(await loadConfig(repo(`export default { link: ${JSON.stringify(LINK_PATHS)} }\n`))).toStrictEqual(
+      refusal('link: unknown key "@acme/ui"'),
+    );
+  });
+
+  it("refuses a value that is not a path, and a link or paths that is not an object", async () => {
+    expect(await loadConfig(repo('export default { link: { paths: { "@acme/ui": 1 } } }\n'))).toStrictEqual(
+      refusal("link.paths.@acme/ui: must be a path like ../ui, relative to the repo root"),
+    );
+    expect(await loadConfig(repo("export default { link: { paths: [] } }\n"))).toStrictEqual(
+      refusal('link.paths: must be an object like { "@acme/ui": "../ui" }'),
+    );
+    expect(await loadConfig(repo("export default { link: [] }\n"))).toStrictEqual(
+      refusal('link: must be an object like { paths: { "@acme/ui": "../ui" }, push: "block" }'),
+    );
+  });
 });
 
 it("clean: parses the extra build dir names, and leaves the section out when omitted", async () => {

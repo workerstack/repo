@@ -65,7 +65,7 @@ describe("defineConfig with its packs on", () => {
           { file: "a.ts", reason: "a script" },
         ],
       },
-      link: { "@app/ui": "../ui" },
+      link: { paths: { "@app/ui": "../ui" }, push: "allow" },
       lint: { skip: [{ files: ["a.ts"], reason: "a reason here", rules: ["eslint/no-await-in-loop"] }] },
       nightly: { secrets: ["API_TOKEN"], shards: 4 },
       owner: { github: "octo", name: "Octo Cat" },

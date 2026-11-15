@@ -1,9 +1,33 @@
-/** The `link` section of repo.config.ts: package name to the checkout `repo link` packs it from. */
+/** The `link` section of repo.config.ts: the checkouts `repo link` packs from, and what the push check does. */
 import { z } from "zod";
 
-import { LINK_OBJECT_ERROR, LINK_PATH_ERROR } from "./link.constants.ts";
+import {
+  DEFAULT_LINK_PUSH,
+  LINK_OBJECT_ERROR,
+  LINK_PATHS_ERROR,
+  LINK_PATH_ERROR,
+  LINK_PUSH,
+  LINK_PUSH_ERROR,
+  type LinkPush,
+} from "./link.constants.ts";
 
-/** The schema of `link`: a map from package name to a path relative to the repo root. */
-export function linkSchema(): z.ZodRecord<z.ZodString, z.ZodString> {
-  return z.record(z.string(), z.string({ error: LINK_PATH_ERROR }), { error: LINK_OBJECT_ERROR });
+type LinkKeys = {
+  paths: z.ZodDefault<z.ZodRecord<z.ZodString, z.ZodString>>;
+  push: z.ZodDefault<z.ZodEnum<{ [K in LinkPush]: K }>>;
+};
+
+/**
+ * The schema of `link`: `paths` maps a package name to a path relative to the repo root; `push` is block or allow.
+ * Each key it omits, and the section itself, parse to the default: no paths, and a push check that blocks.
+ */
+export function linkSchema(): z.ZodDefault<z.ZodObject<LinkKeys, z.core.$strict>> {
+  return z
+    .strictObject(
+      {
+        paths: z.record(z.string(), z.string({ error: LINK_PATH_ERROR }), { error: LINK_PATHS_ERROR }).default({}),
+        push: z.enum(LINK_PUSH, { error: LINK_PUSH_ERROR }).default(DEFAULT_LINK_PUSH),
+      },
+      { error: LINK_OBJECT_ERROR },
+    )
+    .default({ paths: {}, push: DEFAULT_LINK_PUSH });
 }

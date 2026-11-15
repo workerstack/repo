@@ -7,6 +7,7 @@ import type {
   CommitConfig,
   CoverageConfig,
   KnipConfig,
+  LinkConfig,
   LintConfig,
   NightlyConfig,
   OwnerConfig,
@@ -99,13 +100,11 @@ export type RepoConfig<P extends Pack = Pack, N extends string = string> = {
    */
   turbo?: Gated<P, "turbo", TurboConfig> | undefined;
   /**
-   * Local checkouts `bun repo link` packs a dependency from, by package name, when the checkout is not in a sibling
-   * folder. Each path is relative to the repo root.
+   * The checkouts `bun repo link` packs from, and whether a push may go while a public package uses a linked one.
    *
-   * @default {}
-   * @example link: { "@acme/ui": "../../acme/ui" }
+   * @example link: { paths: { "@acme/ui": "../../acme/ui" }, push: "allow" }
    */
-  link?: Readonly<Record<string, string>> | undefined;
+  link?: LinkConfig | undefined;
   /**
    * What `bun repo clean --build` removes.
    *

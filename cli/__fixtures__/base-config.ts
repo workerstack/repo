@@ -2,8 +2,8 @@ import { DEFAULT_COMMIT, type LintSkip, type ResolvedConfig, type ResolvedLint }
 import { DEFAULT_NIGHTLY } from "../nightly-config.ts";
 import { DEFAULT_COVERAGE } from "../coverage-config.ts";
 
-/** The resolved-config keys a test rarely varies: the default commit limit, no lint.skip, no knip.ignore and the default coverage paths. */
-export const BASE_CONFIG: Pick<ResolvedConfig, "commit" | "lint" | "knip" | "coverage" | "nightly" | "tdd" | "ci" | "workflow"> = {
+/** The resolved-config keys a test rarely varies: the default commit limit, no lint.skip, no knip.ignore, the default coverage paths and no link paths. */
+export const BASE_CONFIG: Pick<ResolvedConfig, "commit" | "lint" | "knip" | "coverage" | "nightly" | "tdd" | "ci" | "workflow" | "link"> = {
   commit: DEFAULT_COMMIT,
   lint: { plugins: {}, rules: [], skip: [] },
   knip: { ignore: [] },
@@ -12,6 +12,7 @@ export const BASE_CONFIG: Pick<ResolvedConfig, "commit" | "lint" | "knip" | "cov
   tdd: false,
   ci: { checks: {} },
   workflow: "worktree",
+  link: { paths: {}, push: "block" },
 };
 
 /** A resolved `lint` of `skip`, with no consumer plugins or rules, and the `more` keys a test sets. */

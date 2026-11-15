@@ -2,6 +2,7 @@ import type { Host, Pack, SkillPack } from "./config.ts";
 import type { ResolvedCoverage } from "./coverage-config.ts";
 import type { Json } from "./json.ts";
 import type { ResolvedKnip } from "./knip-schema.ts";
+import type { LinkPush } from "./link.constants.ts";
 import type { ResolvedNightly } from "./nightly-config.ts";
 import type { ResolvedOwner } from "./owner-config.ts";
 import type { Effort, Approval, Strategy } from "./scripts/strategy.types.ts";
@@ -108,11 +109,13 @@ export type ResolvedConfig = {
   readonly owner?: ResolvedOwner | undefined;
   /** The extra turbo tasks of the workspace pack; absent when the config has no `turbo`. */
   readonly turbo?: ResolvedTurbo | undefined;
-  /**
-   * The checkouts `repo link` takes a package from instead of a sibling, by package name; absent when the config has
-   * no `link`.
-   */
-  readonly link?: Readonly<Record<string, string>> | undefined;
+  /** The `link` section with its defaults filled: no paths, and a push check that blocks. */
+  readonly link: {
+    /** The checkouts `repo link` takes a package from instead of a sibling, by package name. */
+    readonly paths: Readonly<Record<string, string>>;
+    /** "block" refuses a push while a public package uses a linked one; "allow" warns and lets it go. */
+    readonly push: LinkPush;
+  };
   /** What `repo clean --build` removes beyond its built-in dirs; absent when the config has no `clean`. */
   readonly clean?:
     | {

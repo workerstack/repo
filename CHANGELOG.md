@@ -11,9 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Sync makes every `*.config.ts` and `*.worker.ts` file a knip entry of its workspace, since tools load them by name or path, and lets `*.worker.ts` default-export in the generated oxlint config
 - Put agents.defaultApproval, agents.defaultEffort and agents.defaultStrategy in a gitignored repo.config.local.ts, set with defineLocalConfig, to override repo.config.ts for one checkout.
+- `link.push: "allow"` in repo.config.ts lets a push go while a public package depends on a linked package: the pre-push check prints `repo link: warning: <package> is public and depends on linked <name>; pushing since link.push is "allow"` and passes. The default, "block", refuses the push as before.
 
 ### Changed
 
+- **Breaking:** `link` in repo.config.ts is now `{ paths, push }`, and the package-to-checkout map moves under `link.paths`: `link: { "@acme/ui": "../ui" }` becomes `link: { paths: { "@acme/ui": "../ui" } }`. The old map fails to load with `link: unknown key "@acme/ui"`.
 - **Breaking:** reject files are checked with TypeScript 7, so a `rejects:` mark must quote the error text tsc 7 prints
 - **Breaking:** `bun repo check` fails a repo whose installed typescript is below 7, naming `bun add -d typescript@7.0.2` (`bun add typescript@7.0.2` when the root lists it under `dependencies`)
 - `repo turn` and `repo precommit` run lint beside sync and the stock history table, start disable comments, typecheck and reject files once those two end, and run related tests and check at once after every write, so a turn after a one-line edit takes about 0.18 s less. A read step reruns when a later write changed the tree it read, sync and stock history run again when lint rewrote a file, and fmt and lint run on a file sync or stock history added, so the next gate finds every step cached.

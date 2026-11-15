@@ -104,7 +104,7 @@ export const DEFAULT_COMMIT: ResolvedCommit = { maxChangedLines: DEFAULT_MAX_CHA
  * - `owner`: who public packages name as author
  * - `ci`: extra commands `bun repo ci` runs
  * - `clean`: extra folders `bun repo clean --build` removes
- * - `link`: local checkouts `bun repo link` packs from
+ * - `link`: local checkouts `bun repo link` packs from, and whether a push may go while one is linked
  *
  * @example
  * ```ts

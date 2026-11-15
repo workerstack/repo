@@ -61,7 +61,7 @@ it("lets the link config override the sibling that publishes the package", async
   const w = scene();
   const alt = path.join(w.base, "flare-wt");
   sibling(alt, NAME, "0.9.0");
-  put(w.main, { "repo.config.ts": `export default { link: { "${NAME}": "../flare-wt" } }\n` });
+  put(w.main, { "repo.config.ts": `export default { link: { paths: { "${NAME}": "../flare-wt" } } }\n` });
   expect(await main([NAME], w.io())).toBe(0);
   expect(w.out[0]).toBe(`linked ${NAME} 0.9.0 from ${alt} (npm had 0.3.2)`);
 });
@@ -69,7 +69,7 @@ it("lets the link config override the sibling that publishes the package", async
 it("links a mapped checkout that is not a sibling", async () => {
   const w = scene();
   sibling(path.join(w.base, "far", "away"), NAME, "0.8.0");
-  put(w.main, { "repo.config.ts": `export default { link: { "${NAME}": "../far/away" } }\n` });
+  put(w.main, { "repo.config.ts": `export default { link: { paths: { "${NAME}": "../far/away" } } }\n` });
   removeTree(w.flare);
   expect(await main([NAME], w.io())).toBe(0);
   expect(versionIn(w.main, NAME)).toBe("0.8.0");
@@ -77,10 +77,10 @@ it("links a mapped checkout that is not a sibling", async () => {
 
 it("exits 1 when the mapped checkout does not publish the package", async () => {
   const w = scene();
-  put(w.main, { "repo.config.ts": `export default { link: { "${NAME}": "../missing" } }\n` });
+  put(w.main, { "repo.config.ts": `export default { link: { paths: { "${NAME}": "../missing" } } }\n` });
   expect(await main([NAME], w.io())).toBe(1);
   expect(w.err).toStrictEqual([
-    `repo link: ${path.join(w.base, "missing")} does not publish ${NAME}; fix \`link\` in repo.config.ts`,
+    `repo link: ${path.join(w.base, "missing")} does not publish ${NAME}; fix \`link.paths\` in repo.config.ts`,
   ]);
 });
 

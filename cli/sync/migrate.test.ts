@@ -133,7 +133,7 @@ it("leaves a config that still loads, with the pack in agents.skills", async () 
       commit: { maxChangedLines: 1000 },
       coverage: DEFAULT_COVERAGE,
       knip: { ignore: [] },
-      link: undefined,
+      link: { paths: {}, push: "block" },
       lint: { plugins: {}, rules: [], skip: [] },
       nightly: DEFAULT_NIGHTLY,
       owner: undefined,

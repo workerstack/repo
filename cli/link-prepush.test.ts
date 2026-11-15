@@ -86,3 +86,37 @@ it("exits 1 when this checkout's package.json cannot be read", async () => {
   expect(await main(["--pre-push"], w.io())).toBe(1);
   expect(w.err[0]).toMatch(/^repo link: package\.json: not valid JSON/);
 });
+
+/** A repo.config.ts whose link section sets `push`. */
+function pushConfig(push: string) {
+  return { "repo.config.ts": `export default { link: { push: ${JSON.stringify(push)} } }\n` };
+}
+
+it('warns and passes for a public dependent when link.push is "allow"', async () => {
+  const w = scene();
+  put(w.main, { "package.json": JSON.stringify(PUBLIC), ...pushConfig("allow") });
+  await main([NAME], w.io());
+  w.out.length = 0;
+  expect(await main(["--pre-push"], w.io())).toBe(0);
+  expect(w.err).toStrictEqual([
+    `repo link: warning: @acme/app is public and depends on linked ${NAME}; pushing since link.push is "allow"`,
+  ]);
+  expect(w.out).toStrictEqual([]);
+});
+
+it('refuses as before when link.push is "block"', async () => {
+  const w = scene();
+  put(w.main, { "package.json": JSON.stringify(PUBLIC), ...pushConfig("block") });
+  await main([NAME], w.io());
+  expect(await main(["--pre-push"], w.io())).toBe(1);
+  expect(w.err).toStrictEqual([refusal("@acme/app")]);
+});
+
+it("exits 1 with the config's problem when link.push is not block or allow", async () => {
+  const w = scene();
+  put(w.main, { "package.json": JSON.stringify(PUBLIC) });
+  await main([NAME], w.io());
+  put(w.main, pushConfig("yes"));
+  expect(await main(["--pre-push"], w.io())).toBe(1);
+  expect(w.err).toStrictEqual(['repo link: repo.config.ts: link.push: must be "block" or "allow"']);
+});

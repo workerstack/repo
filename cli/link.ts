@@ -38,7 +38,7 @@ async function lookupOf(ctx: LinkContext): Promise<LinkLookup> {
     const loaded = await loadConfig(checkout);
 
     if (!loaded.ok) throw new LinkError(loaded.errors.join("\n"));
-    mapped = loaded.config.link ?? {};
+    mapped = loaded.config.link.paths;
   }
 
   const read = readWorkspace(checkout);

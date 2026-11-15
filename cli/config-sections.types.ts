@@ -3,6 +3,7 @@ import type { BuiltInLabel } from "./ci-schema.constants.ts";
 import type { NonEmpty, Taken } from "./config-helpers.types.ts";
 import type { LintBoundaries, LintTailwind } from "./config-resolved.types.ts";
 import type { Host, SkillPack } from "./config-schema.ts";
+import type { LinkPush } from "./link.constants.ts";
 import type { StockPlugin } from "./lint-schema.ts";
 import type { Effort, Approval, Strategy } from "./scripts/strategy.types.ts";
 import type { GeneratedTask } from "./turbo-config.constants.ts";
@@ -70,6 +71,26 @@ export type CleanConfig = {
    * @default []
    */
   build?: readonly string[] | undefined;
+};
+
+/** `link`: the checkouts `bun repo link` packs from, and what the push check does while one is linked. */
+export type LinkConfig = {
+  /**
+   * Local checkouts `bun repo link` packs a dependency from, by package name, when the checkout is not in a sibling
+   * folder. Each path is relative to the repo root.
+   *
+   * @default {}
+   * @example paths: { "@acme/ui": "../../acme/ui" }
+   */
+  paths?: Readonly<Record<string, string>> | undefined;
+  /**
+   * What the pre-push check does while a public package depends on a linked package: "block" refuses the push,
+   * "allow" prints a warning for each such package and lets the push go.
+   *
+   * @default "block"
+   * @example push: "allow"
+   */
+  push?: LinkPush | undefined;
 };
 
 /** `commit`: what the commit-msg hook holds each commit to. */

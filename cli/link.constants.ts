@@ -48,8 +48,19 @@ export const NPM_NONE = "none";
 export const NPM_UNKNOWN = "unknown";
 export const NEVER = "never";
 
-export const LINK_OBJECT_ERROR = 'must be an object like { "@workerstack/flare": "../flare" }';
-export const LINK_PATH_ERROR = "must be a path like ../flare, relative to the repo root";
+export const LINK_OBJECT_ERROR = 'must be an object like { paths: { "@acme/ui": "../ui" }, push: "block" }';
+export const LINK_PATHS_ERROR = 'must be an object like { "@acme/ui": "../ui" }';
+export const LINK_PATH_ERROR = "must be a path like ../ui, relative to the repo root";
+export const LINK_PUSH_ERROR = 'must be "block" or "allow"';
+
+/** What the push check does while a public package depends on a linked one: refuse it, or warn and let it go. */
+export const LINK_PUSH = ["block", "allow"] as const;
+
+/** One of `LINK_PUSH`. */
+export type LinkPush = (typeof LINK_PUSH)[number];
+
+/** The push check when the config sets no `link.push`: refuse. */
+export const DEFAULT_LINK_PUSH: LinkPush = "block";
 
 /** The line for a link that worked: the package and version, where it came from, and the npm version it replaced. */
 export function linkedLine(name: string, version: string, from: string): string {
@@ -75,7 +86,7 @@ export function unlinkedLine(name: string, npm: string): string {
 export function noSibling(main: string, name: string): string {
   return [
     `no sibling of ${main} publishes "${name}";`,
-    "clone it beside this checkout, or map it in repo.config.ts `link`",
+    "clone it beside this checkout, or map it in repo.config.ts `link.paths`",
   ].join(" ");
 }
 
@@ -86,7 +97,7 @@ export function publishesNothing(dir: string): string {
 
 /** The error for a mapped checkout that lacks the package. */
 export function notPublished(dir: string, name: string): string {
-  return `${dir} does not publish ${name}; fix \`link\` in repo.config.ts`;
+  return `${dir} does not publish ${name}; fix \`link.paths\` in repo.config.ts`;
 }
 
 /** The error for a sibling that cannot build. */
@@ -140,6 +151,11 @@ export const WARNING_PREFIX = "repo link: warning: ";
 /** The refusal for a public package that depends on a linked one. */
 export function refusedPush(pkg: string, linked: string): string {
   return `${pkg} is public and depends on linked ${linked}; \`bun repo unlink ${linked}\` before pushing`;
+}
+
+/** The warning for a public package that depends on a linked one, under `link.push: "allow"`. */
+export function allowedPush(pkg: string, linked: string): string {
+  return `${pkg} is public and depends on linked ${linked}; pushing since link.push is "allow"`;
 }
 
 /** The start of an alias dependency spec, `npm:<name>@<range>`. */
