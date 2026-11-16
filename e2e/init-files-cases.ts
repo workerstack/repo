@@ -46,6 +46,7 @@ const IGNORED = [
   "/knip.jsonc",
   "knip.unignored-*.jsonc",
   "/.oxfmtrc.jsonc",
+  ".oxlintrc.fix-*.jsonc",
   "/.oxlintrc.jsonc",
   ".oxlintrc.unskipped-*.jsonc",
   "/.agents/",

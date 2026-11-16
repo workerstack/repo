@@ -24,6 +24,13 @@ export function unskippedConfigPath(pid: number): string {
   return UNSKIPPED_CONFIG_GLOB.replace("*", String(pid));
 }
 
+/** The copies narrowed to a file's over-baseline rules that precommit and turn fix with, each named for its process. */
+export const FIX_CONFIG_GLOB = ".oxlintrc.fix-*.jsonc";
+
+export function fixConfigPath(pid: number): string {
+  return FIX_CONFIG_GLOB.replace("*", String(pid));
+}
+
 /** Fixture trees are copies of other repos' files: never linted or formatted. */
 export const FIXTURES: string = `**/${FIXTURES_DIR}/**`;
 
@@ -34,7 +41,9 @@ const CONFIGS = "**/*.config.ts";
 const WORKERS = "**/*.worker.ts";
 const REPO_CONFIG = `**/${CONFIG_FILE}`;
 const EVAL_FILES = "**/evals/*/eval.ts";
-const CATEGORIES = ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"] as const;
+
+/** oxlint's rule categories. */
+export const CATEGORIES = ["correctness", "suspicious", "pedantic", "perf", "style", "restriction", "nursery"] as const;
 
 /** The categories the base runs whole; the catalog lists their rules. */
 const ON_CATEGORIES: readonly string[] = ["correctness", "suspicious"];

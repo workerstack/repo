@@ -5533,6 +5533,8 @@
     "e16b53ff705a631d"
   ],
   "cli/scripts/lint-consumer-plugin.test.ts": ["2e1b2772f0a8054b"],
+  "cli/scripts/lint-fix-config.test.ts": ["d6f1e87dd0691531"],
+  "cli/scripts/lint-fix-config.ts": ["35aa899c31fe0ad5"],
   "cli/scripts/lint-jsonc.test.ts": [
     "038d9baa86e55b48",
     "03acaefd9b8db336",
@@ -8316,6 +8318,7 @@
     "5b553971398c10cc",
     "64cd8c85e9b59e6a",
     "737cdbd5cd16ff0c",
+    "77048f79b5bcc675",
     "7f11911a18412fdc",
     "a783dce8e55843f1",
     "d76b467ba0f0ce7c",
@@ -8404,6 +8407,7 @@
     "b8c8ca417f7bd550",
     "bdcfe41619301dac",
     "c3edd9534c917be2",
+    "cc08c700978f8493",
     "dbe3b2a645f7a49a",
     "e5b5953e3b8cf9a0",
     "fe6e131ccbe19188",

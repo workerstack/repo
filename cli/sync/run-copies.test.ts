@@ -17,9 +17,10 @@ function exitedPid(): number {
   return spawnSync(process.execPath, ["-e", ""]).pid;
 }
 
-/** The four run copy names for `pid`: oxlint and knip, each in the jsonc and the old json name. */
+/** The run copy names for `pid`: oxlint's fix and unskipped copies and knip's, all but the fix in the old json too. */
 function names(pid: number): string[] {
   return [
+    `.oxlintrc.fix-${pid}.jsonc`,
     `.oxlintrc.unskipped-${pid}.jsonc`,
     `.oxlintrc.unskipped-${pid}.json`,
     `knip.unignored-${pid}.jsonc`,

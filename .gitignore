@@ -2,7 +2,7 @@ node_modules
 dist
 coverage
 
-# repo:ignore af239ef6
+# repo:ignore b932bdb7
 .tmp/
 .worktrees/
 coverage/
@@ -20,6 +20,7 @@ repo.config.local.ts
 /knip.jsonc
 knip.unignored-*.jsonc
 /.oxfmtrc.jsonc
+.oxlintrc.fix-*.jsonc
 /.oxlintrc.jsonc
 .oxlintrc.unskipped-*.jsonc
 # /repo:ignore

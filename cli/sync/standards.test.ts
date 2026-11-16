@@ -171,7 +171,12 @@ it("writes both configs and has git ignore them, then prunes them once the pack 
   }
 
   expect(gitignoreLines(root)).toStrictEqual(
-    expect.arrayContaining(["/.oxfmtrc.jsonc", "/.oxlintrc.jsonc", ".oxlintrc.unskipped-*.jsonc"]),
+    expect.arrayContaining([
+      "/.oxfmtrc.jsonc",
+      ".oxlintrc.fix-*.jsonc",
+      "/.oxlintrc.jsonc",
+      ".oxlintrc.unskipped-*.jsonc",
+    ]),
   );
 
   fs.writeFileSync(path.join(root, CONFIG_FILE), "export default { packs: [] }\n");

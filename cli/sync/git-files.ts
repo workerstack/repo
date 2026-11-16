@@ -13,7 +13,7 @@ import { BACKLOG_FILE, GITIGNORE_PATH, NPM_IGNORE_FILE } from "./git-files.const
 import { HOST_TREES } from "./hosts.ts";
 import { KNIP_CONFIG_PATH, KNIP_UNIGNORED_GLOB } from "./knip-config.ts";
 import type { Output, SyncContext } from "./outputs.ts";
-import { OXLINT_CONFIG_PATH, UNSKIPPED_CONFIG_GLOB } from "./oxlint-config.ts";
+import { FIX_CONFIG_GLOB, OXLINT_CONFIG_PATH, UNSKIPPED_CONFIG_GLOB } from "./oxlint-config.ts";
 import { syntaxOf, writeRegions } from "./region.ts";
 import { CARGO_TARGET_DIR, TOOLCHAIN_PATH } from "./rust.constants.ts";
 import { settingsEdit } from "./settings-edit.ts";
@@ -96,8 +96,11 @@ export function untrackedEntries(hosts: readonly Host[], outputs: readonly Outpu
 
   for (const entry of outputEntries(hosts, outputs)) entries.add(entry);
 
-  // `repo check` writes a skip-free copy beside the oxlint config for one run.
-  if (entries.has(OXLINT_CONFIG_PATH)) entries.add(UNSKIPPED_CONFIG_GLOB);
+  // `repo check` writes a skip-free copy beside the oxlint config for one run, precommit and turn a narrowed one.
+  if (entries.has(OXLINT_CONFIG_PATH)) {
+    entries.add(UNSKIPPED_CONFIG_GLOB);
+    entries.add(FIX_CONFIG_GLOB);
+  }
 
   // `repo check` writes an ignore-free copy beside the knip config for one run.
   if (entries.has(KNIP_CONFIG_PATH)) entries.add(KNIP_UNIGNORED_GLOB);

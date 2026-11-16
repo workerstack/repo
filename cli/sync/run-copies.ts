@@ -1,6 +1,6 @@
 /**
- * The config copies `repo check` writes at the root for one run, named for its process, and removes in a `finally`. A
- * killed check never gets there, so sync removes each copy whose process is gone.
+ * The config copies `repo check`, precommit and turn write at the root for one run, named for its process, and remove
+ * in a `finally`. A killed run never gets there, so sync removes each copy whose process is gone.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -8,12 +8,12 @@ import path from "node:path";
 import { errorCode } from "../sync-errors.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
 import { KNIP_UNIGNORED_GLOB } from "./knip-config.ts";
-import { UNSKIPPED_CONFIG_GLOB } from "./oxlint-config.ts";
+import { FIX_CONFIG_GLOB, UNSKIPPED_CONFIG_GLOB } from "./oxlint-config.ts";
 import { JSON_RUN_COPY_GLOBS, NO_PROCESS, PID_HOLE, PID_RE } from "./run-copies.constants.ts";
 
 /** The pid the run copy `name` is named for, or null when `name` is no run copy. */
 function pidOf(name: string): number | null {
-  for (const glob of [UNSKIPPED_CONFIG_GLOB, KNIP_UNIGNORED_GLOB, ...JSON_RUN_COPY_GLOBS]) {
+  for (const glob of [UNSKIPPED_CONFIG_GLOB, FIX_CONFIG_GLOB, KNIP_UNIGNORED_GLOB, ...JSON_RUN_COPY_GLOBS]) {
     const hole = glob.indexOf(PID_HOLE);
     const prefix = glob.slice(0, hole);
     const suffix = glob.slice(hole + PID_HOLE.length);

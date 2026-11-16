@@ -1,7 +1,8 @@
 /**
- * The steps of `repo turn` and `repo precommit`, each over the change set: fmt, lint with the baseline gate, typecheck,
- * sync when its inputs changed, related tests (precommit only), then check. A step reports a summary label, whether it
- * passed, the tool output to print when it failed, and the files it rewrote, which precommit restages.
+ * The steps of `repo turn` and `repo precommit`, each over the change set: fmt, lint with the baseline gate (its fix
+ * narrowed to the rules a file is over its baseline on), typecheck, sync when its inputs changed, related tests
+ * (precommit only), then check. A step reports a summary label, whether it passed, the tool output to print when it
+ * failed, and the files it rewrote, which precommit restages.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
@@ -17,7 +18,6 @@ import { scriptDiagnostics } from "../script-diagnostics.ts";
 import { byCodeUnit } from "../sync/by-code-unit.ts";
 import { readManifest } from "../sync/manifest.ts";
 import type { Change, Scope } from "./change-set.ts";
-import { fixPasses } from "./fix-passes.ts";
 import { BASELINE_PATH } from "./lint-baseline.constants.ts";
 import {
   countsOf,
@@ -30,6 +30,7 @@ import {
   type Diagnostic,
   type Excess,
 } from "./lint-baseline.ts";
+import { fixOverBaseline } from "./lint-fix-config.ts";
 import { captureBun, captureSorted, captureTool, type Captured } from "./lint.ts";
 import { LINTABLE } from "./lintable.constants.ts";
 import type { TestRun } from "./node-run.ts";
@@ -137,20 +138,24 @@ function overOutput(command: GateName, over: readonly Excess[], diagnostics: rea
   return [...lines, ...fixes];
 }
 
+/** oxlint's report on `files`, or none to read when there are no files. */
+async function oxlintReport(root: string, files: readonly string[]): Promise<Report> {
+  return files.length > 0 ? await lintReport(root, files) : { ok: true, value: [] };
+}
+
 /**
- * Stylelint's fix on the stylesheets, `lint --fix -f json` on the lintable files until a pass rewrites none, then
- * bun fmt on what a fix rewrote.
+ * Stylelint's fix on the stylesheets; oxlint's report on the lintable files, then its fix on each file over its
+ * baseline with only the rules it is over on (`fixOverBaseline`), so a baselined hit stays as it is while an over rule
+ * gets all its hits in that file fixed; bun fmt on what a fix rewrote. A baseline that could not be read runs no fix.
  */
-async function lintFix(root: string, files: readonly string[]) {
-  const rewritten = watch(root, files);
-  await cssDiagnostics(root, files, { fix: true });
+async function lintFix(root: string, files: readonly string[], baseline: Result<Baseline>) {
   const lintable = files.filter((rel) => LINTABLE.test(rel));
 
-  const report =
-    lintable.length > 0
-      ? await fixPasses(root, lintable, async () => await lintReport(root, ["--fix", ...lintable]))
-      : { ok: true as const, value: [] };
-
+  if (!baseline.ok) return { fixed: [], report: await oxlintReport(root, lintable) };
+  const rewritten = watch(root, files);
+  await cssDiagnostics(root, files, { fix: true });
+  const first = await oxlintReport(root, lintable);
+  const report = await fixOverBaseline(root, { baseline: baseline.value, files: lintable }, first);
   const fixed = rewritten();
 
   if (fixed.length > 0) await captureTool("bun fmt", fixed, { root });
@@ -185,13 +190,13 @@ function outsideOver(baseline: Baseline, diagnostics: readonly Diagnostic[], lin
 }
 
 /**
- * Stylelint's and oxlint's fixes, the script checks on the lintable files, stylesheets and Rust sources, then the
- * baseline gate over those and the deleted ones.
+ * Stylelint's fix and oxlint's fix of the rules a file is over its baseline on, the script checks on the lintable
+ * files, stylesheets and Rust sources, then the baseline gate over those and the deleted ones.
  */
 export async function lintStep(turn: Turn): Promise<StepResult> {
-  const { report: oxlint, fixed } = await lintFix(turn.root, present(turn).filter(gated));
-  const report = await withScripts(turn, present(turn).filter(gated), oxlint);
   const baseline = readBaseline(turn.root);
+  const { report: oxlint, fixed } = await lintFix(turn.root, present(turn).filter(gated), baseline);
+  const report = await withScripts(turn, present(turn).filter(gated), oxlint);
 
   if (!report.ok || !baseline.ok) {
     const errors = [report, baseline].flatMap((read) => (read.ok ? [] : read.error));

@@ -1,3 +1,6 @@
+import fs from "node:fs";
+import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
 
 import { cargoLock } from "../rust/__fixtures__/cargo-lock.ts";
@@ -106,3 +109,73 @@ it("a changed Rust file gets the lexer rules, never clippy, under the baseline",
   expect(result.out).toContain(" · lint 1 over baseline · ");
   expect(result.code).toBe(1);
 });
+
+const SORT_KEYS = "eslint(sort-keys)";
+const CURLY = "eslint(curly)";
+const OBJECT = "export const o = {\n  b: 1,\n  a: 2,\n};\n";
+
+/** A formatted function whose `if` has a multi-line body and no braces: one fixable `curly` hit. */
+function unbraced(name: string) {
+  return (
+    `export function ${name}(x: number) {\n  if (x > 0)\n    return {\n      a: x,\n      b: x,\n    };\n\n` +
+    "  return {};\n}\n"
+  );
+}
+
+/** Precommit on `src/a.ts` staged as `text`, its baseline allowing one `sort-keys` and one `curly` hit. */
+async function stagedWithin(text: string) {
+  const baseline = `${JSON.stringify({ "src/a.ts": { [CURLY]: 1, [SORT_KEYS]: 1 } }, null, 2)}\n`;
+  const root = consumer({ [BASELINE]: baseline });
+  write(root, { "src/a.ts": text });
+  git(root, "add", "src/a.ts");
+  const result = await precommit(root);
+  expect(result.err).toBe("");
+  expect(result.code).toBe(0);
+
+  return root;
+}
+
+it("a staged file within its baseline on a fixable rule commits byte-identical", { timeout: SLOW }, async () => {
+  const text = `${OBJECT}\n${unbraced("f")}`;
+  const root = await stagedWithin(text);
+  expect(git(root, "show", ":src/a.ts")).toBe(text);
+  expect(read(root, "src/a.ts")).toBe(text);
+});
+
+it(
+  "a file over its baseline on one rule gets that rule's fix on all its hits and keeps its other fixable hits",
+  { timeout: SLOW },
+  async () => {
+    const root = await stagedWithin(`${OBJECT}\n${unbraced("f")}\n${unbraced("g")}`);
+    const committed = git(root, "show", ":src/a.ts");
+    expect(committed).toContain("export function f(x: number) {\n  if (x > 0) {");
+    expect(committed).toContain("export function g(x: number) {\n  if (x > 0) {");
+    expect(committed.startsWith(OBJECT)).toBe(true);
+  },
+);
+
+it("an unreadable baseline runs no fix and reports the read error", { timeout: SLOW }, async () => {
+  const text = unbraced("f");
+  const root = consumer({ [BASELINE]: '{ "src/a.ts": ' });
+  write(root, { "src/a.ts": text });
+  git(root, "add", "src/a.ts");
+  const result = await precommit(root);
+  expect(result.err).toContain(`repo precommit: ${BASELINE}: not valid JSON`);
+  expect(result.code).toBe(1);
+  expect(git(root, "show", ":src/a.ts")).toBe(text);
+  expect(read(root, "src/a.ts")).toBe(text);
+});
+
+it(
+  "a file over its baseline is fixed under the catalog's rules when the root config is gone",
+  { timeout: SLOW },
+  async () => {
+    const root = consumer({});
+    fs.rmSync(path.join(root, ".oxlintrc.jsonc"));
+    write(root, { "src/a.ts": "export const a = [...[1, 2]];\n" });
+    const result = await turn(root, []);
+    expect(result.err).toBe("");
+    expect(read(root, "src/a.ts")).toBe("export const a = [1, 2];\n");
+    expect(fs.readdirSync(root).filter((name) => name.startsWith(".oxlintrc.fix-"))).toStrictEqual([]);
+  },
+);
