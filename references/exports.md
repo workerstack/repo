@@ -88,7 +88,7 @@ repo.config.ts: lint.rules[0].rules.app/no-x: must be "error" or ["error", optio
 
 The types in `defineConfig` refuse a stock name and a rule whose plugin is not listed. Only the load can see the file and what it exports. Load imports each plugin file, so a plugin that throws fails every command that reads the config, and the line names the file.
 
-There is no key for generated files. oxlint skips every path `.gitignore` ignores, so list generated output such as `**/_gen/` or `**/*.gen.ts` there.
+There is no key for generated files. oxlint skips everything under a `_gen` folder, and every path `.gitignore` ignores, so put generated output in a `_gen` folder or list it there.
 
 ## Stylelint
 
@@ -114,7 +114,7 @@ When two or more sheets import tailwindcss, sync fails and asks for `lint.tailwi
 
 ## Fixture folders
 
-Generated code lives in folders named `_gen`. `bun repo fmt` leaves everything under one as its generator wrote it: oxfmt ignores `**/_gen/**` and the JSON key sort skips it. The `repo:generated` region of `.gitattributes` marks it `linguist-generated`, so GitHub collapses its diffs and the commit size limit does not count it. Commit it when a test compares the build's output to it, or gitignore it.
+Generated code lives in folders named `_gen`. `bun repo fmt` and `bun repo lint` leave everything under one as its generator wrote it: oxfmt and oxlint ignore `**/_gen/**` and the JSON key sort skips it. The `repo:generated` region of `.gitattributes` marks it `linguist-generated`, so GitHub collapses its diffs and the commit size limit does not count it. Commit it when a test compares the build's output to it, or gitignore it.
 
 Test data lives in folders named `__fixtures__`, and every skip (lint, typecheck, Stylelint, jscpd, coverage, mutation, knip, sync pruning) leaves exactly that name out. `bun repo check` fails a folder named `fixtures`, `fixture`, `__fixture__`, `test-fixtures`, `test_fixtures` or `testdata`, tracked or untracked and not ignored, outside `__fixtures__`, `vendor` and the dependency dir:
 

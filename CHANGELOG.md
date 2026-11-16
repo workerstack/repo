@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `repo/consistent-type-definitions` reports an exported interface but no longer fixes it: another module may augment it with `declare module`, which one file cannot show, and the rewrite broke that augmentation. An interface the module does not export is still fixed.
+- `repo check` runs knip under the `customConditions` the workspace's tsconfig.json files set, so a tool config knip loads (a `vite.config.ts`, say) can import a workspace package through a source-only export condition without a build first.
+
+### Changed
+
+- The generated oxlint config ignores `**/_gen/**`, as the oxfmt config does: generated code is its generator's, so lint no longer reports on it. Run `bun repo sync` after upgrading, then `bun repo lint --baseline` to drop the hits it held.
+
 ## [0.2.3] - 2026-11-16
 
 ### Fixed

@@ -53,31 +53,46 @@ describe("consistent-type-definitions merging", () => {
 });
 
 describe("consistent-type-definitions fixes", () => {
-  it("rewrites a plain exported generic interface in a module", () => {
-    const code = "export interface Box<T> { value: T }\n";
+  it("rewrites a plain generic interface in a module", () => {
+    const code = "interface Box<T> { value: T }\nexport {};\n";
     expect(countOf(code)).toBe(1);
-    expect(fixedOf(consistentTypeDefinitions, code)).toBe("export type Box<T> = { value: T };\n");
+    expect(fixedOf(consistentTypeDefinitions, code)).toBe("type Box<T> = { value: T };\nexport {};\n");
   });
 
   it("rewrites an interface that extends as an intersection", () => {
-    const code = "export interface A { a: string }\nexport interface B extends A { b: number }\n";
+    const code = "interface A { a: string }\ninterface B extends A { b: number }\nexport {};\n";
     expect(countOf(code)).toBe(2);
     expect(fixedOf(consistentTypeDefinitions, code)).toBe(
-      "export type A = { a: string };\nexport type B = A & { b: number };\n",
+      "type A = { a: string };\ntype B = A & { b: number };\nexport {};\n",
     );
   });
 
   it("rewrites a generic interface that extends, keeping its type parameters", () => {
-    const code = "export interface A { a: string }\nexport interface C<T> extends A { c: T }\n";
+    const code = "interface A { a: string }\ninterface C<T> extends A { c: T }\nexport {};\n";
     expect(countOf(code)).toBe(2);
     expect(fixedOf(consistentTypeDefinitions, code)).toBe(
-      "export type A = { a: string };\nexport type C<T> = A & { c: T };\n",
+      "type A = { a: string };\ntype C<T> = A & { c: T };\nexport {};\n",
     );
   });
+});
 
-  it("reports an exported default interface and does not fix it", () => {
-    const code = "export default interface A { a: string }\n";
+describe("consistent-type-definitions exports", () => {
+  it.each([
+    ["export default interface A { a: string }\n"],
+    ["export interface A { a: string }\n"],
+    ["interface A { a: string }\nexport { A };\n"],
+    ["interface A { a: string }\nexport default A;\n"],
+  ])("reports an interface another module may augment and does not fix it: %j", (code) => {
     expect(countOf(code)).toBe(1);
     expect(fixedOf(consistentTypeDefinitions, code)).toBe(code);
+  });
+
+  it.each([
+    ['interface A { a: string }\nexport { A as B } from "./b.ts";\nexport default 1;\n'],
+    ['interface A { a: string }\nexport { "A" as B } from "./b.ts";\n'],
+  ])("fixes an interface the module does not export: %j", (code) => {
+    expect(fixedOf(consistentTypeDefinitions, code)).toBe(
+      code.replace("interface A { a: string }", "type A = { a: string };"),
+    );
   });
 });

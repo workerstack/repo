@@ -20,6 +20,7 @@ import {
   WORDINGS,
   type Wording,
 } from "./knip-check.constants.ts";
+import { conditionedArgs, customConditionsOf } from "./knip-conditions.ts";
 import type { KnipIgnore } from "./knip-schema.ts";
 import { captureBun, type Captured } from "./scripts/lint.ts";
 import { standardsWorkspace } from "./standards-workspace.ts";
@@ -66,9 +67,14 @@ function knipBin(): string {
   return path.join(path.dirname(manifest), bin.knip);
 }
 
-/** The knip runner for real: the resolved bin under bun, with no `GIT_*` variable. */
-async function runKnip(args: string[], cwd: string): Promise<Captured> {
-  return await captureBun([knipBin(), ...args], cwd);
+/**
+ * The knip runner for real: the resolved bin under bun, with no `GIT_*` variable, under the workspace's
+ * `customConditions`.
+ */
+function knipRunner(workspace: Workspace): KnipRun {
+  const conditions = customConditionsOf(workspace);
+
+  return async (args, cwd) => await captureBun(conditionedArgs(conditions, knipBin(), args), cwd);
 }
 
 /** The issues in knip's json report, in its order; null when `stdout` is not that report. */
@@ -216,7 +222,7 @@ export async function checkKnipAt(cwd: string, deps: KnipDeps = {}): Promise<Kni
   return await checkKnip({
     ignores: found.config.knip.ignore,
     plugins: Object.values(found.config.lint.plugins),
-    run: deps.run ?? runKnip,
+    run: deps.run ?? knipRunner(found.workspace),
     workspace: found.workspace,
   });
 }

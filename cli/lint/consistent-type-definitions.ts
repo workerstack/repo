@@ -2,7 +2,8 @@
  * Ported from typescript-eslint (MIT, see typescript-eslint.LICENSE): `consistent-type-definitions`. It differs in
  * four ways: an interface that may augment (in `declare module`, `declare global`, or a global script) is left alone,
  * so is one that merges with another declaration of its name (a class, a function, a namespace or another
- * interface), `extends` types come before the body, and the fix ends the type with a semicolon.
+ * interface), `extends` types come before the body, and the fix ends the type with a semicolon. An exported
+ * interface is reported but not fixed: another module may augment it (`declare module`), which one file cannot show.
  */
 import { AST_NODE_TYPES } from "@typescript-eslint/types";
 import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
@@ -72,6 +73,30 @@ function mergesWithAnother(node: TSESTree.TSInterfaceDeclaration): boolean {
   return siblingsOf(statement).some((other) => other !== statement && mergeableName(other) === node.id.name);
 }
 
+/**
+ * Whether the module exports `node`, in its declaration, by an `export { … }` list or as its default: then another
+ * module can augment it.
+ */
+function isExported(node: TSESTree.TSInterfaceDeclaration, program: TSESTree.Program): boolean {
+  if (
+    node.parent.type === AST_NODE_TYPES.ExportNamedDeclaration ||
+    node.parent.type === AST_NODE_TYPES.ExportDefaultDeclaration
+  )
+    return true;
+  const name = node.id.name;
+
+  return program.body.some((statement) => {
+    if (statement.type === AST_NODE_TYPES.ExportDefaultDeclaration)
+      return statement.declaration.type === AST_NODE_TYPES.Identifier && statement.declaration.name === name;
+
+    return (
+      statement.type === AST_NODE_TYPES.ExportNamedDeclaration &&
+      statement.source === null &&
+      statement.specifiers.some((specifier) => specifier.local.name === name)
+    );
+  });
+}
+
 /** The fixes that turn `node` into `type Name<T> = A & B & { … };`, keeping `export` and `declare`. */
 function fixOf(
   sourceCode: Readonly<TSESLint.SourceCode>,
@@ -96,7 +121,7 @@ function fixOf(
 
 /**
  * Fails an interface that could be a type; one that may augment a module or the globals, or that merges with another
- * declaration of its name, is left alone.
+ * declaration of its name, is left alone, and an exported one is not fixed.
  */
 export const consistentTypeDefinitions: RepoRule<"useType"> = {
   create(context) {
@@ -105,10 +130,8 @@ export const consistentTypeDefinitions: RepoRule<"useType"> = {
     return {
       TSInterfaceDeclaration(node) {
         if (isInAmbientBlock(node) || !isModule(sourceCode.ast) || mergesWithAnother(node)) return;
-        const isFixable = node.parent.type !== AST_NODE_TYPES.ExportDefaultDeclaration;
-
         context.report({
-          fix: isFixable ? fixOf(sourceCode, node) : null,
+          fix: isExported(node, sourceCode.ast) ? null : fixOf(sourceCode, node),
           messageId: "useType",
           node: node.id,
         });

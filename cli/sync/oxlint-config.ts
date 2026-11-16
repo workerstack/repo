@@ -4,6 +4,7 @@ import { CONFIG_FILE } from "../config.constants.ts";
 import type { LintSkip, ResolvedLint } from "../config.ts";
 import { STYLELINT_RULE } from "../css/stylelint.constants.ts";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
+import { GENERATED } from "../generated.constants.ts";
 import { isRecord, isString, type Json } from "../json.ts";
 import { binsOf } from "../lint/manifest.ts";
 import { isRustRule, SCRIPT_RULES } from "../script-rules.ts";
@@ -245,7 +246,7 @@ export function oxlintConfig(
     ),
     options: { respectEslintDisableDirectives: false, typeAware: true },
     ...tailwind.settings,
-    ignorePatterns: [FIXTURES, REJECT_FILES],
+    ignorePatterns: [FIXTURES, GENERATED, REJECT_FILES],
     rules: {
       ...RULES,
       ...boundariesSetting(lint.boundaries),

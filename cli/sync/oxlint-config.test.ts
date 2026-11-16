@@ -132,11 +132,11 @@ const BASE_OVERRIDES = [TEST_OVERRIDE, CONFIG_OVERRIDE, WORKER_OVERRIDE, EVAL_OV
 describe("oxlintConfig base", () => {
   it(
     "loads the repo plugin, turns correctness and suspicious on at error, the other categories off, " +
-      "every listed rule on, type-aware, tests and configs relaxed, fixtures and reject files ignored",
+      "every listed rule on, type-aware, tests and configs relaxed, fixtures, _gen and reject files ignored",
     () => {
       expect(configOf(workspace({ name: "app" }))).toStrictEqual({
         categories: CATEGORIES,
-        ignorePatterns: ["**/__fixtures__/**", "**/*.reject.{ts,tsx}"],
+        ignorePatterns: ["**/__fixtures__/**", "**/_gen/**", "**/*.reject.{ts,tsx}"],
         jsPlugins: [{ name: "repo", specifier: "@workerstack/repo/lint" }],
         options: { respectEslintDisableDirectives: false, typeAware: true },
         overrides: BASE_OVERRIDES,
