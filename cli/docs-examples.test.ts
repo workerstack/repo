@@ -54,13 +54,9 @@ it("writes each block with an export and a tsconfig that extends the stock bun o
   const config = read(path.join(scratch, "tsconfig.json"));
   expect(config).toMatch(/"extends": "[^"]*\/tsconfig\/bun\.json"/);
   expect(config).toContain('"noEmit": true');
+  const stock = path.join(import.meta.dirname, "..", "tsconfig").replaceAll("\\", "/");
   expect(JSON.parse(config)).toMatchObject({
-    files: [
-      expect.stringMatching(/^\/.*\/tsconfig\/reset\.d\.ts$/),
-      expect.stringMatching(/^\/.*\/tsconfig\/bun\.d\.ts$/),
-      "references/auth.md-1.ts",
-      "references/auth.md-2.tsx",
-    ],
+    files: [`${stock}/reset.d.ts`, `${stock}/bun.d.ts`, "references/auth.md-1.ts", "references/auth.md-2.tsx"],
   });
   expect(fake.calls).toStrictEqual([
     { args: ["--pretty", "false", "-p", path.join(scratch, "tsconfig.json")], cwd: scratch, tool: "tsc" },
