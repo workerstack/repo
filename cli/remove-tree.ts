@@ -83,17 +83,19 @@ export function removeTree(
   }
 }
 
-/**
- * Removes `dir` and each parent up to `top`, the first dir a recursive mkdir made, while each is empty, so a run
- * leaves no dir it made behind; nothing when `top` is undefined, as the mkdir made no dir.
- */
-export function removeEmptyDirs(dir: string, top: string | undefined): void {
-  if (top === undefined) return;
-  const last = path.resolve(top);
+/** `dir` and each parent of it that is not on disk yet, deepest first: what a recursive mkdir of `dir` would make. */
+export function missingDirs(dir: string): string[] {
+  const missing: string[] = [];
 
-  for (let at = path.resolve(dir); fs.readdirSync(at).length === 0; at = path.dirname(at)) {
-    fs.rmdirSync(at);
+  for (let at = path.resolve(dir); !fs.existsSync(at); at = path.dirname(at)) missing.push(at);
 
-    if (at === last) return;
+  return missing;
+}
+
+/** Removes each of `dirs`, deepest first, while it is empty, so a run leaves none of the dirs it made behind. */
+export function removeEmptyDirs(dirs: readonly string[]): void {
+  for (const dir of dirs) {
+    if (fs.readdirSync(dir).length > 0) return;
+    fs.rmdirSync(dir);
   }
 }
