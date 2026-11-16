@@ -7,14 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
-
-- The turn gate's pass cache keys an ignored symlink by its target instead of reading it, so a gitignored link to a directory (a host's linked skill) no longer fails the gate with EISDIR.
-
 ## [0.2.6] - 2026-11-16
 
 ### Fixed
 
+- The turn gate's pass cache keys an ignored symlink by its target instead of reading it, so a gitignored link to a directory (a host's linked skill) no longer fails the gate with EISDIR.
 - `repo sync` anchors each untracked output's `.gitignore` line to the root (`/.oxfmtrc.jsonc`, `/.claude/`), so a hand-written file of the same name in a subdirectory stays tracked.
 
 ## [0.2.5] - 2026-11-16
