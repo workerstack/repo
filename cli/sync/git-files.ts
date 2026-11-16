@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { LOCAL_CONFIG_FILE } from "../config.constants.ts";
 import type { Host } from "../config.ts";
+import { GENERATED } from "../generated.constants.ts";
 import { IGNORED_DIRS, REPO } from "../repo-dirs.ts";
 import { blockOutput } from "./block-output.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
@@ -135,6 +136,7 @@ function gitignore(ctx: SyncContext, outputs: readonly Output[]): Result {
   return blockFile(ctx, GITIGNORE_PATH, [IGNORE_REGION, lines]);
 }
 
+/** The `repo:generated` region: line endings, every `_gen` folder, and each tracked whole file sync writes. */
 function gitattributes(ctx: SyncContext, outputs: readonly Output[]): Result {
   const generated = wholeFiles(outputs)
     .filter((output) => output.tracked)
@@ -142,7 +144,10 @@ function gitattributes(ctx: SyncContext, outputs: readonly Output[]): Result {
     .toSorted(byCodeUnit)
     .map((rel) => `${rel} linguist-generated`);
 
-  return blockFile(ctx, GITATTRIBUTES_PATH, [ATTRIBUTES_REGION, [ATTRIBUTES_BASE, ...generated]]);
+  return blockFile(ctx, GITATTRIBUTES_PATH, [
+    ATTRIBUTES_REGION,
+    [ATTRIBUTES_BASE, `${GENERATED} linguist-generated`, ...generated],
+  ]);
 }
 
 /**

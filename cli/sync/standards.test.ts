@@ -86,7 +86,7 @@ it(
   () => {
     const { outputs } = standards(context(["standards"]), []);
     expect(contentOf(outputs, ".oxfmtrc.jsonc")).toStrictEqual({
-      ignorePatterns: ["**/*.md", "**/__fixtures__/**", ...OWN_IGNORED],
+      ignorePatterns: ["**/*.md", "**/__fixtures__/**", "**/_gen/**", ...OWN_IGNORED],
       overrides: [{ files: ["**/*.jsonc"], options: { trailingComma: "none" } }],
       printWidth: 120,
       sortImports: {},
@@ -113,7 +113,12 @@ it(
 
     const { outputs } = standards(context(["agents", "standards"], "@workerstack/repo"), planned);
     expect(contentOf(outputs, ".oxfmtrc.jsonc")).toMatchObject({
-      ignorePatterns: ["**/*.md", "**/__fixtures__/**", ...[...OWN_IGNORED, ...PLANNED_IGNORED].toSorted(byCodeUnit)],
+      ignorePatterns: [
+        "**/*.md",
+        "**/__fixtures__/**",
+        "**/_gen/**",
+        ...[...OWN_IGNORED, ...PLANNED_IGNORED].toSorted(byCodeUnit),
+      ],
     });
   },
 );

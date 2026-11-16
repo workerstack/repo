@@ -29,7 +29,7 @@ export const IGNORE_BASE = [
 export const region = (name: string, rows: readonly string[]) =>
   `# repo:${name} ${regionHash(rows.join("\n"))}\n${rows.map((row) => `${row}\n`).join("")}# /repo:${name}\n`;
 export const attributes = (...rels: string[]) =>
-  region("generated", ["* text=auto eol=lf", ...rels.map((rel) => `${rel} linguist-generated`)]);
+  region("generated", ["* text=auto eol=lf", "**/_gen/** linguist-generated", ...rels.map((rel) => `${rel} linguist-generated`)]);
 
 export type Fixture = {
   hosts?: Host[];

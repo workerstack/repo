@@ -76,7 +76,7 @@ it("lists nothing, without an error, when the root is not a git repo", () => {
   expect(repoJson(jsonDir({ "a.json": "{}\n" }, false), null)).toStrictEqual({ files: [], ok: true });
 });
 
-const IGNORES = ["/gen.json", "**/__fixtures__/**", "plain.json", "**/*.md"];
+const IGNORES = ["/gen.json", "**/__fixtures__/**", "**/_gen/**", "plain.json", "**/*.md"];
 const LEFT = ["package.json", "pkgs/package.json"];
 const COMMENTED = '{\n  // keep\n  "b": 1,\n  "a": 2\n}\n';
 const COMMENTED_SORTED = '{\n  "a": 2,\n  // keep\n  "b": 1\n}\n';
@@ -89,6 +89,7 @@ const TREE = {
   ".oxfmtrc.jsonc": ignoreConfig(IGNORES),
   "__fixtures__/f.json": UNSORTED,
   "a/b/plain.json": UNSORTED,
+  "app/src/_gen/openapi.gen.json": UNSORTED,
   "comments.json": COMMENTED,
   "conf/__fixtures__/app.jsonc": COMMENTED,
   "conf/app.jsonc": COMMENTED,
@@ -121,6 +122,7 @@ it("sorts the json files the config does not ignore, an anchored and an unanchor
     "a/b/plain.json",
     "__fixtures__/f.json",
     "x/__fixtures__/y/f.json",
+    "app/src/_gen/openapi.gen.json",
     "notes.txt",
   ])
     expect(readText(root, left)).toBe(UNSORTED);

@@ -46,10 +46,10 @@ it(
   },
 );
 
-it("are marked generated one line each when the repo commits them", () => {
+it("are marked generated one line each when the repo commits them, after every _gen folder", () => {
   const lines = gitattributesOf({ hosts: [...HOSTS] }, planned({ tracked: true })).split("\n");
   expect(lines.filter((line) => line.endsWith(" linguist-generated"))).toStrictEqual(
-    owned.toSorted(byCodeUnit).map((rel) => `${rel} linguist-generated`),
+    ["**/_gen/**", ...owned.toSorted(byCodeUnit)].map((rel) => `${rel} linguist-generated`),
   );
 });
 

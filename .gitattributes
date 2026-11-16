@@ -1,5 +1,6 @@
-# repo:generated c6ccc108
+# repo:generated da9ee0ad
 * text=auto eol=lf
+**/_gen/** linguist-generated
 .agents/agents/implementer-deep.md linguist-generated
 .agents/agents/implementer-fast.md linguist-generated
 .agents/agents/orchestrator.md linguist-generated

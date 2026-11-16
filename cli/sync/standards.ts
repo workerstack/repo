@@ -2,6 +2,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 
+import { GENERATED } from "../generated.constants.ts";
 import { PRINT_WIDTH } from "../lint/max-line-width.constants.ts";
 import { canonicalPath } from "../scripts/workspace-root.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
@@ -21,8 +22,8 @@ const INDEX_FIELD_SEPARATOR = /[ \t]/;
 /**
  * The oxfmt config: width 120, package.json fields sorted (the other json files' keys are sorted by `repo fmt`),
  * imports grouped and sorted, Tailwind classes sorted (a no-op without class attributes) against the entry sheet when
- * there is one, JSONC without trailing commas, and no markdown, fixture or sync output touched; each output path is
- * anchored at the root, so it matches that file alone.
+ * there is one, JSONC without trailing commas, and no markdown, fixture, `_gen` or sync output touched; each output
+ * path is anchored at the root, so it matches that file alone.
  */
 function oxfmtConfig(planned: readonly string[], stylesheet: string | undefined): string {
   const outputs = [
@@ -46,7 +47,7 @@ function oxfmtConfig(planned: readonly string[], stylesheet: string | undefined)
     ["sortTailwindcss", stylesheet === undefined ? {} : { stylesheet }],
     // Hand-written JSONC (hooks, MCP policy) is read by parsers that refuse a trailing comma.
     ["overrides", [{ files: ["**/*.jsonc"], options: { trailingComma: "none" } }]],
-    ["ignorePatterns", ["**/*.md", FIXTURES, ...outputs.toSorted(byCodeUnit)]],
+    ["ignorePatterns", ["**/*.md", FIXTURES, GENERATED, ...outputs.toSorted(byCodeUnit)]],
   ];
 
   const config = Object.fromEntries(entries);

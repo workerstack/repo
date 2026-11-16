@@ -32,7 +32,12 @@ const GITIGNORE = region("# ", "", [
 
 const GITATTRIBUTES = region("# ", "", [
   "generated",
-  "* text=auto eol=lf\nbunfig.toml linguist-generated\npackages/api/bunfig.toml linguist-generated",
+  [
+    "* text=auto eol=lf",
+    "**/_gen/** linguist-generated",
+    "bunfig.toml linguist-generated",
+    "packages/api/bunfig.toml linguist-generated",
+  ].join("\n"),
 ]);
 
 const SETTINGS =
