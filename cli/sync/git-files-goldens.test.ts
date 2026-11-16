@@ -43,7 +43,7 @@ it(
     expect(gitignoreOf(fixture, goldenOutputs)).toBe(
       block("/.agents/", "/.claude/", "/.codex/", "/.cursor/", "/.grok/"),
     );
-    expect(readonlyOf(settingsOf(fixture, goldenOutputs))).toStrictEqual(owned.toSorted(byCodeUnit));
+    expect(readonlyOf(settingsOf(fixture, goldenOutputs))).toStrictEqual(["**/_gen/**", ...owned].toSorted(byCodeUnit));
     expect(gitattributesOf(fixture, goldenOutputs)).toBe(attributes());
   },
 );

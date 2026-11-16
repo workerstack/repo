@@ -9,6 +9,7 @@ import { pathToFileURL } from "node:url";
 import { z } from "zod";
 
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
+import { GENERATED_DIR } from "../generated.constants.ts";
 import { readJson } from "../json.ts";
 import type { Result } from "../result.ts";
 import { codeOf } from "../script-rules.ts";
@@ -40,9 +41,11 @@ function runnerPath(): string {
   return path.join(import.meta.dirname, "stylelint-run.ts");
 }
 
-/** A stylesheet Stylelint lints: a `.css` file outside any fixtures dir. */
+/** A stylesheet Stylelint lints: a `.css` file outside any fixtures or `_gen` dir. */
 export function isLintedCss(rel: string): boolean {
-  return CSS_SOURCE.test(rel) && !rel.split("/").includes(FIXTURES_DIR);
+  const dirs = rel.split("/");
+
+  return CSS_SOURCE.test(rel) && !dirs.includes(FIXTURES_DIR) && !dirs.includes(GENERATED_DIR);
 }
 
 /** The tracked and untracked, not ignored, stylesheets under `root` that Stylelint lints, sorted. */

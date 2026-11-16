@@ -44,11 +44,14 @@ it("converts the old block in place in one pass and keeps the user's lines outsi
   expect(repairsOf({ files }, ".gitattributes")).toStrictEqual(["converted the old markers to repo:generated"]);
 });
 
+const GEN = "**/_gen/**";
+
 const OUTPUTS = [file("bunfig.toml", true), file(".claude/settings.json", false), link(".claude/skills/ask", false)];
 
 it("creates the file with the exact path of every whole file output, sorted, and no link", () => {
   expect(settingsOf({}, OUTPUTS)).toBe(
-    '{\n  "files.readonlyInclude": {\n    ".claude/settings.json": true,\n    "bunfig.toml": true\n  }\n}\n',
+    '{\n  "files.readonlyInclude": {\n    "**/_gen/**": true,\n    ".claude/settings.json": true,\n' +
+      '    "bunfig.toml": true\n  }\n}\n',
   );
   expect(settingsOf({ files: { ".vscode/settings.json": " \n" } }, OUTPUTS)).toBe(settingsOf({}, OUTPUTS));
 });
@@ -61,7 +64,7 @@ it("leaves out block outputs and does not lock a user file inside a generated di
     file("references/INDEX.md", true, "block"),
   ];
 
-  expect(readonlyOf(settingsOf({}, outputs))).toStrictEqual([".claude/settings.json", "bunfig.toml"]);
+  expect(readonlyOf(settingsOf({}, outputs))).toStrictEqual([GEN, ".claude/settings.json", "bunfig.toml"]);
   expect(readonlyOf(settingsOf({}, outputs))).not.toContain(".claude");
   expect(readonlyOf(settingsOf({}, outputs))).not.toContain(".claude/mine.md");
 });
@@ -71,7 +74,7 @@ it("adds the map to a commented file and keeps every other key and comment byte 
   const after = settingsOf({ files: { ".vscode/settings.json": before } }, OUTPUTS);
   expect(after.startsWith("// my editor\n{\n")).toBe(true);
   expect(after.endsWith('\n  "editor.tabSize": 4, // wide\n\t/* keep */ "files.autoSave": "off",\n}\n')).toBe(true);
-  expect(readonlyOf(after)).toStrictEqual([".claude/settings.json", "bunfig.toml"]);
+  expect(readonlyOf(after)).toStrictEqual([GEN, ".claude/settings.json", "bunfig.toml"]);
   expect(parse(after)).toMatchObject({ "editor.tabSize": 4, "files.autoSave": "off" });
 });
 
@@ -95,7 +98,7 @@ it("replaces a map of the user's own, and keeps the keys around it as written", 
     '  "editor.tabSize": 2 /* last */\n}\n';
 
   const after = settingsOf({ files: { ".vscode/settings.json": before } }, OUTPUTS);
-  expect(readonlyOf(after)).toStrictEqual([".claude/settings.json", "bunfig.toml"]);
+  expect(readonlyOf(after)).toStrictEqual([GEN, ".claude/settings.json", "bunfig.toml"]);
   const settings: unknown = parse(after);
   expect(settings).toMatchObject({ "files.readonlyInclude": { "bunfig.toml": true } });
   expect(after.startsWith("{\n  // lock\n  ")).toBe(true);
@@ -119,8 +122,8 @@ it("keeps CRLF line endings of a file that uses them", () => {
   expect(after.replaceAll("\r\n", "")).not.toContain("\n");
 });
 
-it("writes an empty map when there is no whole output", () => {
-  expect(settingsOf({}, [])).toBe('{\n  "files.readonlyInclude": {}\n}\n');
+it("writes the _gen folders alone when there is no whole output", () => {
+  expect(settingsOf({}, [])).toBe('{\n  "files.readonlyInclude": {\n    "**/_gen/**": true\n  }\n}\n');
 });
 
 it("leaves a file that is not valid JSONC as is, naming the error and its line, and still plans the rest", () => {

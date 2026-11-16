@@ -19,7 +19,7 @@ function parsed(ws: Workspace, ignores: readonly KnipIgnore[] = []) {
 }
 
 const SCHEMA = "https://unpkg.com/knip@6/schema.json";
-const FIXTURES = ["**/__fixtures__/**"];
+const FIXTURES = ["**/__fixtures__/**", "**/_gen/**"];
 
 /** The entries of a workspace outside git, where no listing names the tool-loaded files. */
 const DEFAULT_ENTRIES = [

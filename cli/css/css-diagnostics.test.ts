@@ -152,6 +152,13 @@ it("cssFiles lists the sheets Stylelint lints, tracked or not, and reports a dir
   });
 });
 
+it("cssFiles never lists a sheet under a _gen folder, as oxlint and oxfmt skip it", () => {
+  const root = tempDir("workerstack-css-gen-");
+  gitIn(root, "init", "-q");
+  write(root, { "_gen/ui/styles.gen.css": BAD_CSS, "src/_gen/b.css": BAD_CSS, "src/a.css": BAD_CSS });
+  expect(cssFiles(root)).toStrictEqual({ ok: true, value: ["src/a.css"] });
+});
+
 it("cssFiles never lists a sheet under a dependency dir, even before .gitignore ignores it", () => {
   const root = tempDir("workerstack-css-deps-");
   gitIn(root, "init", "-q");

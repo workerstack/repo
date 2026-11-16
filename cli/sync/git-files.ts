@@ -173,11 +173,12 @@ function gitattributes(ctx: SyncContext, outputs: readonly Output[]): Result {
 }
 
 /**
- * `files.readonlyInclude` set to every whole file output; the settings file's other keys and comments stay as written.
+ * `files.readonlyInclude` set to every `_gen` folder and every whole file output; the settings file's other keys and
+ * comments stay as written.
  * A file that is not valid JSONC or holds no object is left as is, its output unchanged with the reason as its repair.
  */
 function settings(ctx: SyncContext, outputs: readonly Output[]): Result {
-  const paths = wholeFiles(outputs).map((output) => output.path);
+  const paths = [GENERATED, ...wholeFiles(outputs).map((output) => output.path)];
 
   const { settings: defaults } = vscodeDefaults(ctx);
 

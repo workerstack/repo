@@ -41,7 +41,8 @@ const GITATTRIBUTES = region("# ", "", [
 ]);
 
 const SETTINGS =
-  '{\n  "files.readonlyInclude": {\n    "bunfig.toml": true,\n    "packages/api/bunfig.toml": true\n  }\n}\n';
+  '{\n  "files.readonlyInclude": {\n    "**/_gen/**": true,\n    "bunfig.toml": true,\n' +
+  '    "packages/api/bunfig.toml": true\n  }\n}\n';
 
 const API_ENTRY = "- [@acme/api](../packages/api/references/INDEX.md): API worker";
 const STACK_ENTRY = "- [@workerstack/repo](../node_modules/@workerstack/repo/references/INDEX.md)";

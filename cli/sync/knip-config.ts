@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { GENERATED } from "../generated.constants.ts";
 import { isRecord, isString } from "../json.ts";
 import type { KnipIgnore } from "../knip-schema.ts";
 import { byCodeUnit } from "./by-code-unit.ts";
@@ -101,7 +102,7 @@ function workspaceConfig(root: string, pkg: WorkspacePackage, extraEntry: readon
   return {
     entry: [...DEFAULT_ENTRIES, ...extraEntry, ...configs.filter((name) => !name.endsWith(TS_CONFIG_SUFFIX))],
     ...(configs.length > 0 ? { vitest: { config: configs } } : {}),
-    ignore: [FIXTURES],
+    ignore: [FIXTURES, GENERATED],
     ignoreBinaries: binNames(manifest),
   };
 }

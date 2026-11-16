@@ -118,7 +118,7 @@ src/app.tsx:7:30: error tailwindcss(no-dynamic-classes): "bg-${x}" is built at r
 
 ## Fixture folders
 
-Generated code lives in folders named `_gen`. `bun repo fmt` and `bun repo lint` leave everything under one as its generator wrote it: oxfmt and oxlint ignore `**/_gen/**` and the JSON key sort skips it. The `repo:generated` region of `.gitattributes` marks it `linguist-generated`, so GitHub collapses its diffs and the commit size limit does not count it. Commit it when a test compares the build's output to it, or gitignore it.
+Generated code lives in folders named `_gen`. `bun repo fmt` and `bun repo lint` leave everything under one as its generator wrote it: oxfmt, oxlint, Stylelint and knip ignore `**/_gen/**` and the JSON key sort skips it. `bun repo sync` lists `**/_gen/**` in `files.readonlyInclude` of `.vscode/settings.json`, so VS Code opens those files read-only. The `repo:generated` region of `.gitattributes` marks it `linguist-generated`, so GitHub collapses its diffs and the commit size limit does not count it. Commit it when a test compares the build's output to it, or gitignore it.
 
 Test data lives in folders named `__fixtures__`, and every skip (lint, typecheck, Stylelint, jscpd, coverage, mutation, knip, sync pruning) leaves exactly that name out. `bun repo check` fails a folder named `fixtures`, `fixture`, `__fixture__`, `test-fixtures`, `test_fixtures` or `testdata`, tracked or untracked and not ignored, outside `__fixtures__`, `vendor` and the dependency dir:
 

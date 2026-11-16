@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `repo/no-undefined-var` fails a `var(--x)` or `utility-(--x)` in a string or template that no sheet in the Tailwind entry's `@import` graph declares, that the file does not set itself and that `lint.tailwind.vars` does not list. The generated `.oxlintrc.jsonc` runs it whenever there is a Tailwind entry sheet.
 - `lint.tailwind.vars` lists the custom properties code sets at runtime (`["--anchor-width", "--toast-*"]`; a trailing `*` matches a prefix), and `lint.tailwind.entryPoint` is now optional beside it. Sync keeps `vars` when it finds the entry.
 - `tailwindcss/no-dynamic-classes` is on with a Tailwind entry sheet, so a class built at runtime, like `` `bg-${x}` ``, fails lint.
+- `bun repo sync` opens every `_gen` folder read-only in VS Code, and `bun repo lint`'s stylelint pass and the knip config skip `**/_gen/**`, as oxlint and oxfmt already do.
 
 ## [0.2.7] - 2026-11-16
 
