@@ -21,6 +21,9 @@ const REJECT_FILE = /\.reject\.tsx?$/;
 /** The configs that type-check a package's code, which a reject file must stay out of. */
 const CHECKING_CONFIGS: readonly string[] = [RUNTIME_CONFIG, SRC_CONFIG];
 
+/** The strict flag a private package may turn off, as it publishes no declarations. */
+const DECLARATIONS_FLAG = "isolatedDeclarations";
+
 /** The flags `tsconfig/strict.json` turns on, which a `tsconfig.src.json` must resolve with. */
 const STRICT_FLAGS = [
   "isolatedDeclarations",
@@ -81,9 +84,13 @@ function resetProblem(rel: string, { hasOwnFiles, fileNames }: ResetRead, reset:
   return `tsconfig: ${rel} does not extend a base. Extend "@workerstack/repo/tsconfig/base", "bun", "worker" or "web".`;
 }
 
-/** A `tsconfig.src.json` that resolves with any strict flag off. */
-function weakProblem(rel: string, options: TsConfig["options"]): string | undefined {
-  const off = STRICT_FLAGS.filter((flag) => options[flag] !== true);
+/** A `tsconfig.src.json` that resolves with any of `flags` off. */
+function weakProblem(
+  rel: string,
+  options: TsConfig["options"],
+  flags: readonly (typeof STRICT_FLAGS)[number][],
+): string | undefined {
+  const off = flags.filter((flag) => options[flag] !== true);
 
   if (off.length === 0) return undefined;
 
@@ -121,7 +128,12 @@ async function problems({ cwd, listed, reset, ts }: Scan, rel: string): Promise<
   const hasOwnFiles = raw.files !== undefined;
   const lines = [resetProblem(rel, { fileNames: read.value.fileNames, hasOwnFiles }, reset)];
 
-  if (name === SRC_CONFIG) lines.push(weakProblem(rel, read.value.options));
+  // A private package publishes no declarations, so its inferred types need no annotation.
+  if (name === SRC_CONFIG) {
+    const isPrivate = readRaw(cwd, path.posix.join(dir, PACKAGE_FILE)).private === true;
+    const flags = isPrivate ? STRICT_FLAGS.filter((flag) => flag !== DECLARATIONS_FLAG) : STRICT_FLAGS;
+    lines.push(weakProblem(rel, read.value.options, flags));
+  }
 
   if (name === RUNTIME_CONFIG && !listed.has(path.posix.join(dir, SRC_CONFIG))) lines.push(missingSrcConfig(dir));
 
@@ -134,6 +146,7 @@ function rawConfigSchema() {
     .object({
       extends: z.json().optional(),
       files: z.json().optional(),
+      private: z.json().optional(),
       references: z.json().optional(),
       scripts: z.json().optional(),
     })

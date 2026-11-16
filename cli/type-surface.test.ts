@@ -35,7 +35,7 @@ it("names a package an export type imports, with its files, and never one used o
   expect(uses).toStrictEqual({ kit: ["src/index.ts", "src/order.ts"] });
   expect(keys).toStrictEqual({ "src/index.ts": ".", "src/order.ts": "." });
   expect(missing).toStrictEqual([]);
-  expect(fs.readdirSync(path.join(dir, ".repo", "tmp"))).toStrictEqual([]);
+  expect(fs.existsSync(path.join(dir, ".repo"))).toBe(false);
 });
 
 it("names a package only a bare specifier reaches, whose declarations live in another package", async () => {
@@ -167,7 +167,7 @@ it("throws tsc's first line when tsc emits no declaration for a source, and leav
   }
 
   await expect(surfaceOf(kit, unreadable)).rejects.toThrow(/tsc emitted no declaration for .*src\/a\.ts: .*TS6053/);
-  expect(fs.readdirSync(path.join(dir, ".repo", "tmp"))).toStrictEqual([]);
+  expect(fs.existsSync(path.join(dir, ".repo"))).toBe(false);
 });
 
 it("reads a package with no tsconfig.json under the strict bundler defaults", async () => {

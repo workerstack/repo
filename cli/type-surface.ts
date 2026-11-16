@@ -16,7 +16,7 @@ import type { CompilerOptions, Project, Symbol as TsSymbol } from "typescript/un
 import { declarationOf, sourcesOf } from "./build-outputs.ts";
 import type { JsonInput } from "./json.ts";
 import { packageLocator } from "./package-locator.ts";
-import { removeTree } from "./remove-tree.ts";
+import { removeEmptyDirs, removeTree } from "./remove-tree.ts";
 import { repoPath, STATE } from "./repo-dirs.ts";
 import { captureBun } from "./scripts/lint.ts";
 import { tscBin } from "./scripts/package-bin.ts";
@@ -196,7 +196,7 @@ async function readSurface(run: TsRun, place: Place, manifest: PackageJson): Pro
 export async function typeSurface(native: string, manifest: PackageJson): Promise<Surface> {
   const dir = posix(fs.realpathSync(native));
   const temp = repoPath(dir, STATE);
-  fs.mkdirSync(temp, { recursive: true });
+  const made = fs.mkdirSync(temp, { recursive: true });
   const virtual = posix(fs.mkdtempSync(path.join(temp, SURFACE_TEMP)));
   const base = fs.existsSync(path.join(dir, RUNTIME_CONFIG)) ? RUNTIME_CONFIG : null;
 
@@ -204,5 +204,6 @@ export async function typeSurface(native: string, manifest: PackageJson): Promis
     return await withTsApi(dir, (run) => readSurface(run, { base, dir, virtual }, manifest));
   } finally {
     removeTree(virtual);
+    removeEmptyDirs(temp, made);
   }
 }

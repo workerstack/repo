@@ -25,6 +25,20 @@ describe("checkTsconfigs", () => {
     srcConfig(dir, "packages/api", { [flag]: false });
     expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([WEAK("packages/api/tsconfig.src.json", flag)]);
   });
+});
+
+describe("checkTsconfigs on a private package", () => {
+  it("lets a private package's tsconfig.src.json turn isolatedDeclarations off, and no other flag", async () => {
+    const dir = consumerRepo();
+    write(dir, "packages/app/package.json", { name: "app", private: true });
+    write(dir, "packages/app/tsconfig.json", { extends: "@workerstack/repo/tsconfig/bun", include: ["src"] });
+    srcConfig(dir, "packages/app", { isolatedDeclarations: false });
+    expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
+    srcConfig(dir, "packages/app", { exactOptionalPropertyTypes: false, isolatedDeclarations: false });
+    expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([
+      WEAK("packages/app/tsconfig.src.json", "exactOptionalPropertyTypes"),
+    ]);
+  });
 
   it("names every flag a tsconfig.src.json without the strict base resolves without", async () => {
     const dir = consumerRepo();

@@ -5,7 +5,7 @@ import path from "node:path";
 import { afterEach, expect, it } from "vitest";
 
 import { removeTemps } from "./__fixtures__/remove-temps.ts";
-import { removeTree } from "./remove-tree.ts";
+import { removeEmptyDirs, removeTree } from "./remove-tree.ts";
 
 const made: string[] = [];
 
@@ -197,4 +197,26 @@ it.skipIf(process.platform === "win32")("removeTree unlocks a locked tree before
 
   removeTree(dir, rm, (ms) => waits.push(ms));
   expect({ gone: !fs.existsSync(dir), waits }).toStrictEqual({ gone: true, waits: [] });
+});
+
+it("removes the empty dirs a recursive mkdir made, from the deepest up to the first it made, and no further", () => {
+  const root = tmp();
+  const deep = path.join(root, "pkg/.repo/tmp");
+  fs.mkdirSync(path.join(root, "pkg"));
+  const top = fs.mkdirSync(deep, { recursive: true });
+  removeEmptyDirs(deep, top);
+  expect(fs.readdirSync(root)).toStrictEqual(["pkg"]);
+  expect(fs.readdirSync(path.join(root, "pkg"))).toStrictEqual([]);
+});
+
+it("stops at the first dir that still holds an entry, and does nothing when the mkdir made no dir", () => {
+  const root = tmp();
+  const deep = path.join(root, ".repo/tmp");
+  const top = fs.mkdirSync(deep, { recursive: true });
+  fs.writeFileSync(path.join(root, ".repo/kept"), "x");
+  removeEmptyDirs(deep, top);
+  expect(fs.readdirSync(path.join(root, ".repo"))).toStrictEqual(["kept"]);
+  fs.mkdirSync(deep);
+  removeEmptyDirs(deep, undefined);
+  expect(fs.existsSync(deep)).toBe(true);
 });
