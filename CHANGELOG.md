@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.7] - 2026-11-16
+
 ### Fixed
 
 - A workspace member that declares no vitest and holds no vitest config gets no vitest run in precommit's related tests, red-proof or coverage: one that tests with `bun test` or playwright found the root's hoisted vitest, which then loaded its vite config as a test config and failed. The root still runs vitest as before.
