@@ -6570,7 +6570,7 @@
   "cli/scripts/parsed-fetch.test.ts": ["95bdc9ad8d49d8f1"],
   "cli/scripts/parsed-fetch.ts": ["92fe17d467946539"],
   "cli/scripts/pass-cache.constants.ts": ["a9b2f6dd1c54f728"],
-  "cli/scripts/pass-cache.ts": ["9a1a83ad7e3ef9c5"],
+  "cli/scripts/pass-cache.ts": ["58e177e0319184b6", "9a1a83ad7e3ef9c5"],
   "cli/scripts/pattern-words.constants.ts": ["9f1af84f047b571d"],
   "cli/scripts/pattern-words.ts": ["4778b5d486d984d1"],
   "cli/scripts/persist-doc-checks.ts": [
@@ -8321,7 +8321,12 @@
     "ef0912258ae33a70",
     "ff9a7a12e0084b3c"
   ],
-  "cli/scripts/turn-cache-gate.test.ts": ["577df0ace535000c", "61436764cd558993", "9917939d1ec919ec"],
+  "cli/scripts/turn-cache-gate.test.ts": [
+    "577df0ace535000c",
+    "61436764cd558993",
+    "9917939d1ec919ec",
+    "bcf44e62b4e9949f"
+  ],
   "cli/scripts/turn-cache.test.ts": ["4c690abadeec153d", "ef4f01a897e14f26"],
   "cli/scripts/turn-edges.test.ts": [
     "118e2e6c40512b34",

@@ -104,6 +104,14 @@ function ignoredFiles(root: string): string[] {
     .toSorted();
 }
 
+/**
+ * One ignored file's part of the env: its bytes' hash, or a link's target, since git lists a link to a dir (a host's
+ * linked skill) as a file, which reading would follow into the dir.
+ */
+function ignoredKey(file: string): string {
+  return fs.lstatSync(file).isSymbolicLink() ? `-> ${fs.readlinkSync(file)}` : sha256(fs.readFileSync(file, "utf8"));
+}
+
 function nodeVersion(): string {
   const run = spawnSync("node", ["--version"], { encoding: "utf8" });
 
@@ -126,8 +134,7 @@ function gateEnv(workspace: Workspace): string {
   for (const [dir, manifest] of dirs)
     for (const name of dependencyNames(manifest)) lines.push(`${dir} ${name} ${installed(dir, name)}`);
 
-  for (const rel of ignoredFiles(workspace.root))
-    lines.push(`${rel} ${sha256(fs.readFileSync(path.join(workspace.root, rel), "utf8"))}`);
+  for (const rel of ignoredFiles(workspace.root)) lines.push(`${rel} ${ignoredKey(path.join(workspace.root, rel))}`);
 
   return sha256(lines.join("\n"));
 }

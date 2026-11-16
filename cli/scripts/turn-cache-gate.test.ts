@@ -101,3 +101,14 @@ it("a passing gate removes the entries older than a week and keeps the rest", { 
   expect(fs.readdirSync(dir)).toContain("new");
   expect(fs.readdirSync(dir)).not.toContain("old");
 });
+
+// A symlink to a dir needs privilege on win32.
+it.skipIf(process.platform === "win32")(
+  "an ignored link to a dir keys the cache by its target, so a passing gate is cached",
+  { timeout: SLOW },
+  async () => {
+    const root = edited({ ".gitignore": ".env\n/linked\n", "shared/x.md": "x\n" });
+    fs.symlinkSync("shared", path.join(root, "linked"));
+    expect(await twice(root)).toStrictEqual([["first"], []]);
+  },
+);
