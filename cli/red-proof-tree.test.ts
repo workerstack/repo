@@ -101,7 +101,11 @@ it("puts a renamed file's old path back", () => {
 });
 
 it("runs two packages each in their own HEAD-tree dir with their modules linked", () => {
-  const root = plant({ "pkg-a/package.json": { name: "a" }, "pkg-b/package.json": { name: "b" } });
+  const root = plant({
+    "pkg-a/package.json": { devDependencies: { vitest: "5.1.0" }, name: "a" },
+    "pkg-b/package.json": { devDependencies: { vitest: "5.1.0" }, name: "b" },
+  });
+
   fs.mkdirSync(nodePath.join(root, "pkg-a", "node_modules"));
   stage(root, { "pkg-a/a.test.ts": PASS, "pkg-b/b.test.ts": PASS, "pkg-b/c.test.ts": PASS });
   const calls: unknown[] = [];
@@ -157,7 +161,7 @@ it("skips with a line when there is no HEAD", () => {
 });
 
 it("owns a nested test by the nearest package dir above it", () => {
-  const root = plant({ "cli/package.json": { name: "c" } });
+  const root = plant({ "cli/package.json": { devDependencies: { vitest: "5.1.0" }, name: "c" } });
   stage(root, { "cli/sub/deep/a.test.ts": PASS, "top/b.test.ts": PASS });
   const calls: unknown[] = [];
 

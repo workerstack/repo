@@ -6035,8 +6035,8 @@
   "cli/scripts/managed-text.test.ts": ["dade4183879caebf"],
   "cli/scripts/managed-text.ts": ["753b41b12491a44f"],
   "cli/scripts/max-fix-passes.constants.ts": ["5b9f9c4a33857a4a"],
-  "cli/scripts/node-run.test.ts": ["23ac3e018f4b5afe"],
-  "cli/scripts/node-run.ts": ["7415cb118a52adc2", "f0eb470d29296dad"],
+  "cli/scripts/node-run.test.ts": ["08ab3d596dfe5152", "23ac3e018f4b5afe"],
+  "cli/scripts/node-run.ts": ["29c26196668fe368", "7415cb118a52adc2", "f0eb470d29296dad"],
   "cli/scripts/opencode-host.test.ts": ["456f6b13b18a3571"],
   "cli/scripts/orchestrate-approvals.ts": [
     "16ab81522c4f32c6",
@@ -8279,6 +8279,7 @@
   "cli/scripts/tests-step.ts": [
     "0db8ddc117fe748d",
     "361d72132853665f",
+    "546e112bf9f0015a",
     "a68209d128afbd2f",
     "ec5fed3643669bfa",
     "fef5683c3f513394"

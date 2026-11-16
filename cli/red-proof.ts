@@ -158,7 +158,7 @@ function runGroups(tree: string, groups: Map<string, string[]>, vitest: Run): Ra
     const cwd = path.join(tree, dir);
     const results: { name: string; status: string }[] = [];
 
-    for (const run of testRuns(cwd)) {
+    for (const run of testRuns(cwd, { member: dir !== "." })) {
       const output = path.join(tree, `.red-proof-report-${n++}.json`);
       const args = ["run", ...files, "--passWithNoTests", "--reporter=json", `--outputFile=${output}`];
       const ran = vitest(args, cwd, run);

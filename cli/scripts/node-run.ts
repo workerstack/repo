@@ -5,7 +5,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
+import { z } from "zod";
+
 import { findRoot } from "../config.ts";
+import { tryJson } from "../json.ts";
 import { NESTED_VITEST_FLAGS } from "../nested-vitest-flags.ts";
 import type { Result } from "../result.ts";
 import { devNodeRange, nodeRange } from "../sync/node-range.ts";
@@ -18,8 +21,52 @@ export const NODE_CONFIG = "vitest.node.config.ts";
 /** Which of a package's vitest runs: its main config, or the node config on node. */
 export type TestRun = "main" | "node";
 
-/** The runs of the package at `dir`: the main one, then the node one when `dir` holds the node config. */
-export function testRuns(dir: string): readonly TestRun[] {
+/** A vitest config file's name: `vitest.config.ts`, `vitest.node.config.mts` and the like. */
+const VITEST_CONFIG_NAME = /^vitest(?:\.[\w-]+)?\.config\.[cm]?[jt]s$/;
+
+/** The dependency maps of a package.json, the only part `declaresVitest` reads. */
+function dependencyMapsSchema() {
+  const map = z.record(z.string(), z.unknown()).optional();
+
+  return z.object({ dependencies: map, devDependencies: map, optionalDependencies: map, peerDependencies: map });
+}
+
+/** Whether the package.json in `dir` names vitest in any dependency map; a missing or unreadable one does not. */
+function declaresVitest(dir: string): boolean {
+  let text: string;
+
+  try {
+    text = fs.readFileSync(path.join(dir, "package.json"), "utf8");
+  } catch {
+    return false;
+  }
+
+  const maps = tryJson(dependencyMapsSchema(), text);
+
+  if (maps === undefined) return false;
+  const { dependencies, devDependencies, optionalDependencies, peerDependencies } = maps;
+
+  return [dependencies, devDependencies, optionalDependencies, peerDependencies].some((map) =>
+    Object.hasOwn(map ?? {}, "vitest"),
+  );
+}
+
+/**
+ * Whether the workspace member at `dir` tests with vitest: when it declares vitest or holds a vitest config. One that
+ * tests with `bun test` or playwright finds the root's vitest hoisted all the same, and a run would load its vite
+ * config as a test config.
+ */
+function memberTestsWithVitest(dir: string): boolean {
+  return declaresVitest(dir) || fs.readdirSync(dir).some((name) => VITEST_CONFIG_NAME.test(name));
+}
+
+/**
+ * The runs of the package at `dir`: the main one, then the node one when `dir` holds the node config. The root, where
+ * the shared dev tools install, always has them; a `member` only when it tests with vitest, else none.
+ */
+export function testRuns(dir: string, { member = false }: { member?: boolean } = {}): readonly TestRun[] {
+  if (member && !memberTestsWithVitest(dir)) return [];
+
   return fs.existsSync(path.join(dir, NODE_CONFIG)) ? ["main", "node"] : ["main"];
 }
 

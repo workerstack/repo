@@ -1,9 +1,21 @@
+import path from "node:path";
+
 import { afterEach, expect, it } from "vitest";
 
 import { bad, ci, plant, reportAt } from "./__fixtures__/ci-run.ts";
-import { ANSWER, cleanTemps, consumer, git, precommit, recording, SLOW, write } from "./__fixtures__/turn-repo.ts";
+import {
+  ANSWER,
+  cleanTemps,
+  consumer,
+  git,
+  precommit,
+  recording,
+  SLOW,
+  tempDir,
+  write,
+} from "./__fixtures__/turn-repo.ts";
 import type { Captured } from "./lint.ts";
-import { NODE_CONFIG } from "./node-run.ts";
+import { NODE_CONFIG, testRuns } from "./node-run.ts";
 import type { Bins } from "./turn-steps.ts";
 
 afterEach(cleanTemps);
@@ -109,4 +121,31 @@ it("the skip report holds the skipped tests of both runs", async () => {
   const run = await ci(root, ["--report", "r.json"], { json: skipped("a.test.ts"), nodeJson: skipped("b.test.ts") });
   expect(run.code).toBe(0);
   expect(reportAt(root)).toMatchObject({ skipped: ["a.test.ts > t", "b.test.ts > t"] });
+});
+
+/** A workspace whose root holds the repo config and whose `packages/api` member holds `member`. */
+function member(files: Record<string, string>): string {
+  const root = tempDir("workerstack-runs-");
+  write(root, { "package.json": '{ "name": "app", "workspaces": ["packages/*"] }\n', ...files });
+
+  return path.join(root, "packages/api");
+}
+
+it.each<[string, Record<string, string>, readonly string[]]>([
+  ["declares no vitest and holds no config: it tests otherwise", {}, []],
+  ["declares vitest", { "packages/api/package.json": '{ "devDependencies": { "vitest": "5.1.0" } }\n' }, ["main"]],
+  ["holds a vitest config", { "packages/api/vitest.config.ts": "export default {};\n" }, ["main"]],
+  [
+    "holds the node config too",
+    { "packages/api/vitest.config.ts": "", [`packages/api/${NODE_CONFIG}`]: "" },
+    ["main", "node"],
+  ],
+])("a member that %s gets those vitest runs", (_, files, runs) => {
+  expect(
+    testRuns(member({ "packages/api/package.json": '{ "name": "api" }\n', ...files }), { member: true }),
+  ).toStrictEqual(runs);
+});
+
+it("the root runs vitest though its manifest names none, as the shared dev tools install there", () => {
+  expect(testRuns(path.dirname(path.dirname(member({}))))).toStrictEqual(["main"]);
 });

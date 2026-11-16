@@ -43,7 +43,8 @@ async function relatedRuns(turn: Turn): Promise<{ owner: string; run: Captured |
     const args = ["related", "--run", "--passWithNoTests", ...own];
     const dir = path.join(turn.root, owner);
 
-    for (const run of testRuns(dir)) runs.push({ owner, run: await turn.bins.vitest(args, dir, run) });
+    for (const run of testRuns(dir, { member: owner !== "" }))
+      runs.push({ owner, run: await turn.bins.vitest(args, dir, run) });
   }
 
   return runs;

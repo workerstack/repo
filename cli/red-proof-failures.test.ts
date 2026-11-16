@@ -54,7 +54,7 @@ it("refuses when vitest crashed, quoting the last stderr lines", () => {
 });
 
 it("names the package dir when its run timed out", () => {
-  const root = plant({ "cli/package.json": { name: "c" } });
+  const root = plant({ "cli/package.json": { devDependencies: { vitest: "5.1.0" }, name: "c" } });
   stage(root, { "cli/a.test.ts": PASS });
   expect(redProof(root, change(["A", "cli/a.test.ts"]), { vitest: timeout })).toStrictEqual({
     ok: false,
