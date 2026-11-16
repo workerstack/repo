@@ -149,3 +149,10 @@ it.each<[string, Record<string, string>, readonly string[]]>([
 it("the root runs vitest though its manifest names none, as the shared dev tools install there", () => {
   expect(testRuns(path.dirname(path.dirname(member({}))))).toStrictEqual(["main"]);
 });
+
+it.each([
+  ["has no package.json", { "packages/api/a.test.ts": "" }],
+  ["has a package.json that is not JSON", { "packages/api/package.json": "{" }],
+])("a member that %s declares no vitest, so gets no vitest run", (_, files) => {
+  expect(testRuns(member(files), { member: true })).toStrictEqual([]);
+});
