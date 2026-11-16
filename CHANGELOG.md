@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `repo sync` anchors each untracked output's `.gitignore` line to the root (`/.oxfmtrc.jsonc`, `/.claude/`), so a hand-written file of the same name in a subdirectory stays tracked.
+
 ## [0.2.5] - 2026-11-16
 
 ### Fixed

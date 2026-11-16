@@ -53,6 +53,7 @@ const DEPENDENCY_DIR = `node_modules/`;
 const ATTRIBUTES_BASE = "* text=auto eol=lf";
 
 const LEADING_DOT = /^\./;
+const TRAILING_SLASH = /\/$/;
 
 /** Sorts a leading dot away, so `AGENTS.md` stays before `.mcp.json` as the gitignore block always listed them. */
 function byName(a: string, b: string) {
@@ -65,11 +66,15 @@ function wholeFiles(outputs: readonly Output[]): FileOutput[] {
 }
 
 /**
- * What git must ignore for the untracked whole outputs: an output under a dir an enabled host owns collapses to
- * the outermost such dir, any other is listed as its exact path, and the oxlint and knip configs bring the
- * pattern of their one-run copies. Files first, then dirs, each sorted.
+ * `entry` as a `.gitignore` pattern for the one path it names: one with a slash before its end is already anchored
+ * to the root, any other gets a leading slash.
  */
-export function untrackedEntries(hosts: readonly Host[], outputs: readonly Output[]): string[] {
+function anchored(entry: string): string {
+  return entry.replace(TRAILING_SLASH, "").includes("/") ? entry : `/${entry}`;
+}
+
+/** The entry of each untracked whole output: the outermost dir an enabled host owns that holds it, or its path. */
+function outputEntries(hosts: readonly Host[], outputs: readonly Output[]): Set<string> {
   const owned = hosts.flatMap((host) => HOST_TREES[host].owns).toSorted((a, b) => a.length - b.length);
   const entries = new Set<string>();
 
@@ -77,6 +82,19 @@ export function untrackedEntries(hosts: readonly Host[], outputs: readonly Outpu
     if (output.tracked || output.managed !== "whole") continue;
     entries.add(owned.find((dir) => output.path.startsWith(dir)) ?? output.path);
   }
+
+  return entries;
+}
+
+/**
+ * What git must ignore for the untracked whole outputs: an output under a dir an enabled host owns collapses to
+ * the outermost such dir, any other is listed as its exact path, and the oxlint and knip configs bring the
+ * pattern of their one-run copies. Files first, then dirs, each sorted.
+ */
+export function untrackedEntries(hosts: readonly Host[], outputs: readonly Output[]): string[] {
+  const entries = new Set<string>();
+
+  for (const entry of outputEntries(hosts, outputs)) entries.add(entry);
 
   // `repo check` writes a skip-free copy beside the oxlint config for one run.
   if (entries.has(OXLINT_CONFIG_PATH)) entries.add(UNSKIPPED_CONFIG_GLOB);
@@ -126,8 +144,12 @@ export function ignoreBlockLines(
   outputs: readonly Output[],
 ): string[] {
   const dependencies = isSelfName(name) ? [] : [DEPENDENCY_DIR];
+  // a sync output names one path, so its line is anchored, or it would ignore its name at any depth (a hand-written
+  // `src/runtime/.oxfmtrc.jsonc` below the root's generated one); a tool's dir such as `.turbo/` is nested too
+  const own = outputEntries(hosts, outputs);
+  const untracked = untrackedEntries(hosts, outputs).map((entry) => (own.has(entry) ? anchored(entry) : entry));
 
-  return [...IGNORE_BASE, ...dependencies, ...untrackedEntries(hosts, outputs)];
+  return [...IGNORE_BASE, ...dependencies, ...untracked];
 }
 
 function gitignore(ctx: SyncContext, outputs: readonly Output[]): Result {
@@ -229,8 +251,12 @@ export function strayIgnoreFiles(root: string, workspace: Workspace, ignored: re
   return lines;
 }
 
-/** The `repo sync:` line for one ignore line and the `files` git tracks under it. */
-function trackedLine(line: string, files: readonly string[]): string {
+/**
+ * The `repo sync:` line for one ignore line and the `files` git tracks under it, the line named by its root-relative
+ * path: an anchored line's leading slash would make `git rm` read it as an absolute path.
+ */
+function trackedLine(pattern: string, files: readonly string[]): string {
+  const line = pattern.startsWith("/") ? pattern.slice(1) : pattern;
   const isMany = files.length > 1;
   const count = `${files.length} file${isMany ? "s" : ""}`;
   const keeps = `but sync keeps ${isMany ? "them" : "it"} untracked`;

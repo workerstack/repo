@@ -40,7 +40,9 @@ it(
     "(a consumer commits none but AGENTS.md)",
   () => {
     const fixture = { hosts: [...HOSTS] };
-    expect(gitignoreOf(fixture, goldenOutputs)).toBe(block(".agents/", ".claude/", ".codex/", ".cursor/", ".grok/"));
+    expect(gitignoreOf(fixture, goldenOutputs)).toBe(
+      block("/.agents/", "/.claude/", "/.codex/", "/.cursor/", "/.grok/"),
+    );
     expect(readonlyOf(settingsOf(fixture, goldenOutputs))).toStrictEqual(owned.toSorted(byCodeUnit));
     expect(gitattributesOf(fixture, goldenOutputs)).toBe(attributes());
   },
@@ -77,7 +79,7 @@ it(
     "and never its shared AGENTS.md",
   () => {
     expect(gitignoreOf({ hosts: ["claude"] }, packageOutputs({ tracked: false }))).toBe(
-      block("packages/web/.claude/skills/deploy", "packages/web/CLAUDE.md", ".claude/"),
+      block("packages/web/.claude/skills/deploy", "packages/web/CLAUDE.md", "/.claude/"),
     );
   },
 );

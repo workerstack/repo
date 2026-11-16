@@ -171,7 +171,7 @@ it("writes both configs and has git ignore them, then prunes them once the pack 
   }
 
   expect(gitignoreLines(root)).toStrictEqual(
-    expect.arrayContaining([".oxfmtrc.jsonc", ".oxlintrc.jsonc", ".oxlintrc.unskipped-*.jsonc"]),
+    expect.arrayContaining(["/.oxfmtrc.jsonc", "/.oxlintrc.jsonc", ".oxlintrc.unskipped-*.jsonc"]),
   );
 
   fs.writeFileSync(path.join(root, CONFIG_FILE), "export default { packs: [] }\n");
@@ -191,7 +191,7 @@ it("writes knip.jsonc with the knip.ignore entries, has git ignore it and its co
   expect(parse(fs.readFileSync(path.join(root, "knip.jsonc"), "utf8"))).toMatchObject({
     workspaces: { ".": { ignoreFiles: ["src/old.ts"] } },
   });
-  expect(gitignoreLines(root)).toStrictEqual(expect.arrayContaining(["knip.jsonc", "knip.unignored-*.jsonc"]));
+  expect(gitignoreLines(root)).toStrictEqual(expect.arrayContaining(["/knip.jsonc", "knip.unignored-*.jsonc"]));
   fs.writeFileSync(path.join(root, CONFIG_FILE), "export default { packs: [] }\n");
   expect(await sync(root)).toBe(0);
   expect(fs.existsSync(path.join(root, "knip.jsonc"))).toBe(false);

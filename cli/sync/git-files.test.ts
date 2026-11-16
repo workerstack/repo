@@ -26,20 +26,25 @@ it("ignores the bare .tmp/ and every ignored .repo dir, and the fixture list mat
 
 it("lists .mcp.json and every host dir for the untracked trees of all hosts, and never the shared AGENTS.md", () => {
   expect(gitignoreOf({ hosts: [...HOSTS] }, treeOutputs(HOSTS, false))).toBe(
-    block(".mcp.json", ".agents/", ".claude/", ".codex/", ".cursor/", ".grok/"),
+    block("/.mcp.json", "/.agents/", "/.claude/", "/.codex/", "/.cursor/", "/.grok/"),
   );
 });
 
 it("lists only what the enabled hosts own, a parent dir covering its children", () => {
-  expect(gitignoreOf({ hosts: ["claude"] }, treeOutputs(["claude"], false))).toBe(block(".mcp.json", ".claude/"));
-  expect(gitignoreOf({ hosts: ["codex"] }, treeOutputs(["codex"], false))).toBe(block(".agents/skills/", ".codex/"));
+  expect(gitignoreOf({ hosts: ["claude"] }, treeOutputs(["claude"], false))).toBe(block("/.mcp.json", "/.claude/"));
+  expect(gitignoreOf({ hosts: ["codex"] }, treeOutputs(["codex"], false))).toBe(block(".agents/skills/", "/.codex/"));
   const both: Host[] = ["codex", "antigravity"];
-  expect(gitignoreOf({ hosts: both }, treeOutputs(both, false))).toBe(block(".agents/", ".codex/"));
+  expect(gitignoreOf({ hosts: both }, treeOutputs(both, false))).toBe(block("/.agents/", "/.codex/"));
 });
 
 it("lists an untracked output outside every host dir by its exact path, and an untracked link by its dir", () => {
   const outputs = [file("generated/out.txt", false), link(".claude/skills/ask", false)];
-  expect(gitignoreOf({ hosts: ["claude"] }, outputs)).toBe(block("generated/out.txt", ".claude/"));
+  expect(gitignoreOf({ hosts: ["claude"] }, outputs)).toBe(block("generated/out.txt", "/.claude/"));
+});
+
+it("anchors a root output's line, so a hand-written file of its name in a subdir stays tracked", () => {
+  const outputs = [file(".oxfmtrc.jsonc", false), file("packages/a/.oxfmtrc.jsonc", false)];
+  expect(gitignoreOf({ hosts: [] }, outputs)).toBe(block("/.oxfmtrc.jsonc", "packages/a/.oxfmtrc.jsonc"));
 });
 
 it("ignores the vitest report and attachment directories, so lint and git skip what a test run writes", () => {
