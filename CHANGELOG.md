@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-11-16
+
 ### Fixed
 
 - `bun repo lint --fix` no longer leaves code that tsc rejects. `repo/consistent-type-definitions` now leaves an interface alone when it merges with a class, function, namespace or another interface of the same name, since a type alias cannot merge and the rewrite dropped the merged members. The generated oxlint config turns off three rules whose fixers change types: `unicorn/no-useless-undefined` (`return undefined` became `return`, typing a callback's result as void), `typescript/no-meaningless-void-operator` (`return void x` became `return x`) and `typescript/no-unnecessary-type-assertion` (it dropped casts tsc needs, in files outside every tsconfig and for an assertion the receiver seemed to accept, `as never` included). Run `bun repo sync` after upgrading.
