@@ -31,7 +31,7 @@ import {
 } from "./docs.constants.ts";
 import { removeTree } from "./remove-tree.ts";
 import type { Captured } from "./scripts/lint.ts";
-import { configOf, withTsApi } from "./ts-api.ts";
+import { withTsApi } from "./ts-api.ts";
 
 /** The tools an example check runs: `tsc` with its arguments, and `bun`. Each runs in `cwd` and is captured. */
 export type ExampleTools = {
@@ -95,15 +95,16 @@ function fileOf(block: Block): string {
 /**
  * The absolute `files` the config at `file` inherits through its extends chain, such as the stock bun config's
  * reset.d.ts and bun.d.ts. A probe that extends it with no `files` of its own and an empty `include` lists exactly
- * those. A config TypeScript cannot read lists none, and the type-check names its error.
+ * those. The probe is always readable, and a base that is missing or broken only adds a diagnostic, which the
+ * type-check names.
  */
 async function inheritedFiles(scratch: string, file: string): Promise<readonly string[]> {
   const probe = path.join(scratch, TSCONFIG_FILE);
   fs.writeFileSync(probe, JSON.stringify({ extends: file, include: [] }));
 
-  const read = await withTsApi(scratch, (run) => configOf(run, probe.replaceAll("\\", "/")));
+  const read = await withTsApi(scratch, ({ api }) => api.parseConfigFile(probe.replaceAll("\\", "/")));
 
-  return read.ok ? read.value.fileNames : [];
+  return read.fileNames;
 }
 
 /**
