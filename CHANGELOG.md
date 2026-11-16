@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-16
+
 ### Changed
 
 - `repo fmt` leaves files under a `_gen` folder at any depth as their generator wrote them: the generated oxfmt config ignores `**/_gen/**`, so neither oxfmt nor the JSON key sort touches them, and the `repo:generated` region of `.gitattributes` marks them `linguist-generated`. A repo that commits generated JSON and checks the build reproduces it byte for byte now passes both checks. Run `bun repo sync` after upgrading.
