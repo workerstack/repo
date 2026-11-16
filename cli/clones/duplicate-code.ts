@@ -13,6 +13,7 @@ import { z } from "zod";
 
 import { childEnv } from "../env.ts";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
+import { GENERATED_DIR } from "../generated.constants.ts";
 import { readJson } from "../json.ts";
 import { removeTree } from "../remove-tree.ts";
 import type { Result } from "../result.ts";
@@ -62,9 +63,14 @@ function byPlace(a: Pairing, b: Pairing): number {
   return a.own.start === b.own.start ? a.own.startLoc.column - b.own.startLoc.column : a.own.start - b.own.start;
 }
 
-/** A JS or TS source jscpd scans: neither under a fixtures dir nor a reject file, whose errors are its point. */
+/**
+ * A JS or TS source jscpd scans: not a reject file, whose errors are its point, nor under a fixtures dir or a `_gen`
+ * one, whose generator repeats itself by design.
+ */
 function isScanned(rel: string): boolean {
-  return SOURCE.test(rel) && !REJECT_FILE.test(rel) && !rel.split("/").includes(FIXTURES_DIR);
+  const dirs = rel.split("/");
+
+  return SOURCE.test(rel) && !REJECT_FILE.test(rel) && !dirs.includes(FIXTURES_DIR) && !dirs.includes(GENERATED_DIR);
 }
 
 /** `side` named by a POSIX path, as jscpd names it by a native one. */

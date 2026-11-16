@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `repo/duplicate-code` skips files under a `_gen` folder, as oxlint and oxfmt do: a generator repeats itself by design, and its copies landed in the lint baseline.
+
 ## [0.2.4] - 2026-11-16
 
 ### Changed

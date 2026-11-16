@@ -85,8 +85,8 @@ it("reports no copy under 5 code lines, however many blank lines spread it", () 
   expect(clonesOf({ "src/d.ts": spaced, "src/e.ts": spaced })).toStrictEqual({ ok: true, value: [] });
 });
 
-it("neither scans nor reports a file under a fixtures dir", () => {
-  const files = { "src/__fixtures__/a.ts": TOTAL, "src/__fixtures__/b.ts": TOTAL, "src/a.ts": TOTAL };
+it.each([["__fixtures__"], ["_gen"]])("neither scans nor reports a file under a %s dir", (dir) => {
+  const files = { [`src/${dir}/a.ts`]: TOTAL, [`src/${dir}/b.ts`]: TOTAL, "src/a.ts": TOTAL };
   expect(clonesOf(files)).toStrictEqual({ ok: true, value: [] });
 });
 
