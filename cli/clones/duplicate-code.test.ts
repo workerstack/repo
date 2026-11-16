@@ -164,3 +164,71 @@ it("looks for Windows' msvc package, and for both Linux libcs of an arch not ins
     ok: false,
   });
 });
+
+/**
+ * 8 one-line imports from different modules, like a test file's header: 56 tokens over 8 lines,
+ * enough for jscpd alone.
+ */
+const IMPORTS = `${Array.from({ length: 8 }, (_, i) => `import { name${i} } from "mod-${i}";`).join("\n")}\n`;
+
+/** Re-exports and a require-style import in every form the rule leaves out of a clone's code lines. */
+const REEXPORTS = [
+  "import {",
+  "  alpha,",
+  "  beta,",
+  "  gamma,",
+  "  delta,",
+  "  epsilon,",
+  '} from "greek";',
+  'export { one, uno } from "numbers-one";',
+  'export { two, dos } from "numbers-two";',
+  'export { three, tres } from "numbers-three";',
+  'export * from "everything";',
+  'import legacy = require("legacy-module");',
+  "",
+].join("\n");
+
+it("reports no clone made only of one-line imports", () => {
+  const files = {
+    "src/a.ts": `${IMPORTS}export const A = 1;\nexport const B = 2;\n`,
+    "src/b.ts": `${IMPORTS}export const C = 3;\nexport const D = 4;\n`,
+  };
+
+  expect(clonesOf(files)).toStrictEqual({ ok: true, value: [] });
+});
+
+it("reports no clone made only of a multi-line import, re-exports, an export-all and an import-equals", () => {
+  const files = {
+    "src/a.ts": `${REEXPORTS}export const A = 1;\nexport const B = 2;\n`,
+    "src/b.ts": `${REEXPORTS}export const C = 3;\nexport const D = 4;\n`,
+  };
+
+  expect(clonesOf(files)).toStrictEqual({ ok: true, value: [] });
+});
+
+it("still reports a clone of imports followed by real code, from the first import line", () => {
+  const files = { "src/a.ts": `${IMPORTS}${TOTAL}`, "src/b.ts": `${IMPORTS}${TOTAL}` };
+  const tokens = TOKENS + 56;
+  expect(clonesOf(files)).toStrictEqual({
+    ok: true,
+    value: [
+      side("src/a.ts:1:1", { lines: "1-17", other: "src/b.ts:1-17", tokens }),
+      side("src/b.ts:1:1", { lines: "1-17", other: "src/a.ts:1-17", tokens }),
+    ],
+  });
+});
+
+it("still counts an import-only clone in files that do not parse", () => {
+  const files = {
+    "src/a.ts": `${IMPORTS}export const A = 1;\nexport const B = 2;\nconst broken;\n`,
+    "src/b.ts": `${IMPORTS}export const C = 3;\nexport const D = 4;\nconst broken;\n`,
+  };
+
+  expect(clonesOf(files)).toStrictEqual({
+    ok: true,
+    value: [
+      side("src/a.ts:1:1", { lines: "1-9", other: "src/b.ts:1-9", tokens: 58 }),
+      side("src/b.ts:1:1", { lines: "1-9", other: "src/a.ts:1-9", tokens: 58 }),
+    ],
+  });
+});

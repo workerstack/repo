@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `tailwindcss/no-dynamic-classes` is on with a Tailwind entry sheet, so a class built at runtime, like `` `bg-${x}` ``, fails lint.
 - `bun repo sync` opens every `_gen` folder read-only in VS Code, and `bun repo lint`'s stylelint pass and the knip config skip `**/_gen/**`, as oxlint and oxfmt already do.
 
+### Fixed
+
+- repo/duplicate-code no longer counts import and re-export lines, so a clone made only of a shared import list is no hit.
+
 ## [0.2.7] - 2026-11-16
 
 ### Fixed

@@ -2,15 +2,17 @@
  * `repo/duplicate-code`: each side of every clone jscpd finds over the checkout's JS and TS sources (50 tokens and 5
  * code lines at least, a blank line not counted) as a lint diagnostic in its file, naming the other side. jscpd scans a
  * temp copy of the sources, so every clone's sides are named relative to one root, and the files outside the
- * checkout's listing are never read.
+ * checkout's listing are never read. The lines of an import declaration, or a re-export from a module, don't count.
  */
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
+import type { Program } from "oxc-parser";
 import { z } from "zod";
 
+import { sourceOf } from "../env-syntax.ts";
 import { childEnv } from "../env.ts";
 import { FIXTURES_DIR } from "../fixtures.constants.ts";
 import { GENERATED_DIR } from "../generated.constants.ts";
@@ -78,22 +80,68 @@ function posix(side: Side): Side {
   return { ...side, name: side.name.split(path.sep).join("/") };
 }
 
-/** The lines of each file under `root` by its root-relative name, read once per file. */
-type Lines = { root: string; byFile: Map<string, string[]> };
+/** A file's lines, and the 1-based numbers of those its import declarations span. */
+type FileLines = { text: string[]; imports: ReadonlySet<number> };
 
-/**
- * `side`'s span as jscpd measures one, its end line less its start line, with the lines that hold only whitespace
- * left out: the lines past its first that hold code.
- */
-function codeSpan(lines: Lines, side: Side): number {
-  let text = lines.byFile.get(side.name);
+/** The lines of each file under `root` by its root-relative name, read and parsed once per file. */
+type Lines = { root: string; byFile: Map<string, FileLines> };
 
-  if (text === undefined) {
-    text = fs.readFileSync(path.join(lines.root, side.name), "utf8").split("\n");
-    lines.byFile.set(side.name, text);
+/** True for a top-level import, a re-export from a module, an export-all or an import-equals declaration. */
+function isImportLike(statement: Program["body"][number]): boolean {
+  if (statement.type === "ExportNamedDeclaration") return statement.source !== null;
+
+  return (
+    statement.type === "ImportDeclaration" ||
+    statement.type === "ExportAllDeclaration" ||
+    statement.type === "TSImportEqualsDeclaration"
+  );
+}
+
+/** The 1-based line `offset` falls on in `text`. */
+function lineAt(text: string, offset: number): number {
+  return text.slice(0, offset).split("\n").length;
+}
+
+/** The 1-based lines from the one `start` falls on through the one `end` does in `text`. */
+function spanLines(text: string, start: number, end: number): number[] {
+  const first = lineAt(text, start);
+
+  return Array.from({ length: lineAt(text, end) - first + 1 }, (_, i) => first + i);
+}
+
+/** The 1-based lines the import declarations of `text`, parsed as `name`, span; none when it does not parse. */
+function importLines(name: string, text: string): Set<number> {
+  const source = sourceOf(name, text);
+
+  if (source.isBroken) return new Set();
+
+  return new Set(source.program.body.filter(isImportLike).flatMap(({ start, end }) => spanLines(text, start, end)));
+}
+
+/** `name`'s lines under `lines.root` with its import lines, read and parsed on the first ask. */
+function fileLines(lines: Lines, name: string): FileLines {
+  let file = lines.byFile.get(name);
+
+  if (file === undefined) {
+    const text = fs.readFileSync(path.join(lines.root, name), "utf8");
+
+    file = { imports: importLines(name, text), text: text.split("\n") };
+    lines.byFile.set(name, file);
   }
 
-  return text.slice(side.start, side.end).filter((line) => line.trim() !== "").length;
+  return file;
+}
+
+/**
+ * `side`'s span as jscpd measures one, its end line less its start line, with the lines that hold only whitespace and
+ * those of an import declaration left out: the lines past its first that hold code.
+ */
+function codeSpan(lines: Lines, side: Side): number {
+  const { imports, text } = fileLines(lines, side.name);
+
+  const span = text.slice(side.start, side.end);
+
+  return span.filter((line, i) => line.trim() !== "" && !imports.has(side.start + i + 1)).length;
 }
 
 /** The diagnostic of the clone side `own`, in its file, naming the side `other`. */
@@ -148,8 +196,8 @@ function scan(bin: string, root: string, sources: readonly string[]): Report {
 /**
  * Each side in `scope.files` of every clone jscpd finds over `scope.sources` (the JS and TS ones outside fixtures dirs)
  * as a diagnostic in its file, naming the other side; a clone within one file gives two there, and one either side of
- * which spans fewer than 5 code lines none, so blank lines never make a clone. No jscpd run when no source is left.
- * Or why it could not run: the binary for `target` (this host by default) missing.
+ * which spans fewer than 5 code lines none, so blank lines and import declaration lines never make a clone. No jscpd
+ * run when no source is left. Or why it could not run: the binary for `target` (this host by default) missing.
  */
 export function duplicateDiagnostics(root: string, scope: CloneScope, target?: Target): Result<Diagnostic[]> {
   const sources = scope.sources.filter(isScanned);
