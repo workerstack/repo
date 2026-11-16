@@ -1,6 +1,6 @@
 {
   "name": "@workerstack/repo",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": false,
   "description": "Agent workflow, code standards, gates, workspace and docs checks for workerstack repos",
   "keywords": [
