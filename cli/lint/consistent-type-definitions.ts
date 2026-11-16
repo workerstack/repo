@@ -26,6 +26,18 @@ function isModule(program: TSESTree.Program): boolean {
   return program.body.some((statement) => MODULE_STATEMENTS.includes(statement.type));
 }
 
+/** A declaration an interface of the same name merges with. */
+type Mergeable =
+  | TSESTree.ClassDeclaration
+  | TSESTree.FunctionDeclaration
+  | TSESTree.TSInterfaceDeclaration
+  | TSESTree.TSModuleDeclaration;
+
+/** Whether `node` is a declaration an interface of the same name merges with. */
+function isMergeable(node: TSESTree.Node | null): node is Mergeable {
+  return node !== null && MERGING_DECLARATIONS.includes(node.type);
+}
+
 /** The name `statement` declares when it is a declaration an interface can merge with, unwrapping an export. */
 function mergeableName(statement: TSESTree.Node): string | null {
   const declaration =
@@ -34,10 +46,20 @@ function mergeableName(statement: TSESTree.Node): string | null {
       ? statement.declaration
       : statement;
 
-  if (declaration === null || !MERGING_DECLARATIONS.includes(declaration.type)) return null;
-  const id = "id" in declaration ? declaration.id : null;
+  if (!isMergeable(declaration)) return null;
 
-  return id?.type === AST_NODE_TYPES.Identifier ? id.name : null;
+  return declaration.id?.type === AST_NODE_TYPES.Identifier ? declaration.id.name : null;
+}
+
+/** The statements of the list that holds `statement`: a program, a module block or a block; none in a switch case. */
+function siblingsOf(statement: TSESTree.Node): readonly TSESTree.Node[] {
+  const list = statement.parent;
+
+  return list?.type === AST_NODE_TYPES.Program ||
+    list?.type === AST_NODE_TYPES.TSModuleBlock ||
+    list?.type === AST_NODE_TYPES.BlockStatement
+    ? list.body
+    : [];
 }
 
 /**
@@ -46,10 +68,8 @@ function mergeableName(statement: TSESTree.Node): string | null {
  */
 function mergesWithAnother(node: TSESTree.TSInterfaceDeclaration): boolean {
   const statement = node.parent.type === AST_NODE_TYPES.ExportNamedDeclaration ? node.parent : node;
-  const list = statement.parent;
-  const body = list.type === AST_NODE_TYPES.Program || list.type === AST_NODE_TYPES.TSModuleBlock ? list.body : [];
 
-  return body.some((other) => other !== statement && mergeableName(other) === node.id.name);
+  return siblingsOf(statement).some((other) => other !== statement && mergeableName(other) === node.id.name);
 }
 
 /** The fixes that turn `node` into `type Name<T> = A & B & { … };`, keeping `export` and `declare`. */

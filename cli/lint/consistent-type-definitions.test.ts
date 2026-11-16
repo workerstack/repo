@@ -31,6 +31,22 @@ describe("consistent-type-definitions merging", () => {
     expect(fixedOf(consistentTypeDefinitions, code)).toBe(code);
   });
 
+  it.each([
+    ["export default class A {}\n\ninterface A {\n  a: string;\n}\n"],
+    ["export function f(): void {\n  class A {}\n\n  interface A {\n    a: string;\n  }\n}\n"],
+  ])("does not report or fix an interface merged in a default export or a block: %j", (code) => {
+    expect(countOf(code)).toBe(0);
+  });
+
+  it.each([
+    ["const x = 1;\nexport { x };\nexport interface A { a: string }\n"],
+    ["export default class {}\nexport interface A { a: string }\n"],
+    ['declare module "y" {}\nexport interface A { a: string }\n'],
+    ["export function f(x: number): void {\n  switch (x) {\n    case 1:\n      interface A { a: string }\n  }\n}\n"],
+  ])("still reports an interface no declaration of its name sits beside: %j", (code) => {
+    expect(countOf(code)).toBe(1);
+  });
+
   it("still reports an interface whose name only a declaration in another scope shares", () => {
     expect(countOf("export interface A { a: string }\nexport function f(): void {\n  class A {}\n}\n")).toBe(1);
   });
