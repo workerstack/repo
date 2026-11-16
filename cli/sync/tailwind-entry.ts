@@ -38,11 +38,13 @@ function entryErrors(root: string, entryPoint: string): string[] {
 
 /**
  * `lint` with the entry sheet under `root`: the configured one once it is a file importing tailwindcss, else the one
- * linted sheet that imports it. Two or more need `lint.tailwind.entryPoint`, since oxlint loads one theme; none, or
- * no git checkout to list them in, leaves `lint` as it is and the class rules off.
+ * linted sheet that imports it; the configured `vars` stay either way. Two or more need `lint.tailwind.entryPoint`,
+ * since oxlint loads one theme; none, or no git checkout to list them in, leaves `lint` as it is and the class rules
+ * off.
  */
 export function withTailwindEntry(root: string, lint: ResolvedLint): TailwindLint {
   const configured = lint.tailwind?.entryPoint;
+  const vars = lint.tailwind?.vars ?? [];
 
   if (configured !== undefined) {
     const errors = entryErrors(root, configured);
@@ -56,7 +58,7 @@ export function withTailwindEntry(root: string, lint: ResolvedLint): TailwindLin
 
   if (entryPoint === undefined) return { lint, ok: true };
 
-  if (others.length === 0) return { lint: { ...lint, tailwind: { entryPoint } }, ok: true };
+  if (others.length === 0) return { lint: { ...lint, tailwind: { entryPoint, vars } }, ok: true };
   const count = COUNT_WORDS[entries.length] ?? String(entries.length);
   const list = entries.join(", ");
 

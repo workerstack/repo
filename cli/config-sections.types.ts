@@ -1,7 +1,7 @@
 /** The shape of each section of repo.config.ts, as `defineConfig` takes it, with what each key does and its default. */
 import type { BuiltInLabel } from "./ci-schema.constants.ts";
 import type { NonEmpty, Taken } from "./config-helpers.types.ts";
-import type { LintBoundaries, LintTailwind } from "./config-resolved.types.ts";
+import type { LintBoundaries, LintTailwindInput } from "./config-resolved.types.ts";
 import type { Host, SkillPack } from "./config-schema.ts";
 import type { LinkPush } from "./link.constants.ts";
 import type { StockPlugin } from "./lint-schema.ts";
@@ -269,12 +269,12 @@ export type LintConfig<N extends string = string> = {
    */
   boundaries?: LintBoundaries | undefined;
   /**
-   * The Tailwind sheet lint checks class names against. Needed only when two or more sheets import tailwindcss;
-   * with one, it is found by itself.
+   * The Tailwind sheet lint checks class names and css vars against, and the vars code sets at runtime. Needed only
+   * when two or more sheets import tailwindcss, or for `vars`; with one sheet, the entry is found by itself.
    *
    * @default undefined
    */
-  tailwind?: LintTailwind | undefined;
+  tailwind?: LintTailwindInput | undefined;
 };
 
 /** `nightly`: the scheduled run of mutation testing and live tests. */

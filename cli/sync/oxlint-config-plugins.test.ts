@@ -25,7 +25,7 @@ function configFor(lint: ResolvedLint) {
 it("loads a consumer plugin from its file beside the config, after the repo and tailwindcss plugins", () => {
   expect(configFor({ plugins: PLUGINS, rules: [], skip: [] }).jsPlugins).toStrictEqual([REPO_PLUGIN, APP_PLUGIN]);
 
-  const tailwind = { entryPoint: "src/app.css" };
+  const tailwind = { entryPoint: "src/app.css", vars: [] };
 
   expect(configFor({ plugins: PLUGINS, rules: [], skip: [], tailwind }).jsPlugins).toStrictEqual([
     REPO_PLUGIN,

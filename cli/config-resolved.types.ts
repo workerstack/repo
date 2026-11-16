@@ -53,10 +53,18 @@ export type LintBoundaries = {
   readonly allow: Readonly<Record<string, readonly string[]>>;
 };
 
-/** `lint.tailwind`: the Tailwind v4 entry sheet oxlint checks class names against. */
-export type LintTailwind = {
-  /** The repo-relative `.css` file that imports tailwindcss, like `apps/web/src/app.css`. */
-  readonly entryPoint: string;
+/** `lint.tailwind` as a config writes it: both keys are optional. */
+export type LintTailwindInput = {
+  /** The repo-relative `.css` file that imports tailwindcss, like `apps/web/src/app.css`; sync finds it when unset.
+   *
+   * @default undefined
+   */
+  readonly entryPoint?: string | undefined;
+  /** Custom properties code sets at runtime, like `--anchor-width`; a trailing `*` matches a prefix, `--toast-*`.
+   *
+   * @default []
+   */
+  readonly vars?: readonly string[] | undefined;
 };
 
 /** One consumer rule's setting: on at error severity, with the options a rule takes after `"error"`. */
@@ -80,8 +88,16 @@ export type ResolvedLint = {
   readonly skip: readonly LintSkip[];
   /** The package tags `repo/boundaries` judges imports by; absent when the config sets none. */
   readonly boundaries?: LintBoundaries | undefined;
-  /** The entry sheet the tailwindcss class rules load the theme from; absent when there is none. */
-  readonly tailwind?: LintTailwind | undefined;
+  /**
+   * `lint.tailwind` once parsed: the entry sheet the tailwindcss class rules load the theme from (absent when there is
+   * none) and the runtime vars, none when the config lists none; absent when the config has no `tailwind`.
+   */
+  readonly tailwind?:
+    | (LintTailwindInput & {
+        /** The runtime vars; none when the config lists none. */
+        readonly vars: readonly string[];
+      })
+    | undefined;
 };
 
 /** A validated repo.config.ts with every omitted value filled in, as the `repo` commands read it. */

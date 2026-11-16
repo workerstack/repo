@@ -93,7 +93,7 @@ it(
       sortPackageJson: true,
       sortTailwindcss: {},
     });
-    const lint = { plugins: {}, rules: [], skip: [], tailwind: { entryPoint: "src/app.css" } };
+    const lint = { plugins: {}, rules: [], skip: [], tailwind: { entryPoint: "src/app.css", vars: [] } };
     const sorted = standards(context(["standards"], "app", lint), []).outputs;
     expect(contentOf(sorted, ".oxfmtrc.jsonc")).toMatchObject({ sortTailwindcss: { stylesheet: "src/app.css" } });
   },

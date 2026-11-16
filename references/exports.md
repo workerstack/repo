@@ -24,7 +24,7 @@ export default defineConfig({
       tags: { "@app/web": "app", "@app/ui": "ui", "@app/lib": "lib" },
       allow: { app: ["ui", "lib"], ui: ["lib"], lib: [] },
     },
-    tailwind: { entryPoint: "apps/web/src/app.css" },
+    tailwind: { entryPoint: "apps/web/src/app.css", vars: ["--anchor-width", "--toast-*"] },
     plugins: { app: "lint/app.js" },
     rules: [{ files: ["src/**"], rules: { "app/no-x": "error" } }],
   },
@@ -103,14 +103,18 @@ src/bad.css:9:3: error stylelint(order/properties-order): Expected "display" to 
 
 ## Tailwind classes
 
-Under the `standards` pack, a checkout with a Tailwind v4 entry sheet gets oxlint-tailwindcss 1.17.0's class rules at error: `tailwindcss/no-unknown-classes`, `no-conflicting-classes`, `no-duplicate-classes` and `no-hardcoded-colors`. `bun repo sync` takes the one sheet Stylelint lints whose line `@import "tailwindcss"` (or `'tailwindcss'`, with `source(…)` or a layer after it) loads the theme, and writes it into `.oxlintrc.jsonc` as `settings.tailwindcss.entryPoint` and into `.oxfmtrc.jsonc` as `sortTailwindcss.stylesheet`. The plugin loads as `@workerstack/repo/tailwind`, so it resolves from this package's install. Without such a sheet nothing changes.
+Under the `standards` pack, a checkout with a Tailwind v4 entry sheet gets oxlint-tailwindcss 1.17.0's class rules at error: `tailwindcss/no-unknown-classes`, `no-conflicting-classes`, `no-duplicate-classes`, `no-dynamic-classes` and `no-hardcoded-colors`, and this package's `repo/no-undefined-var`. `bun repo sync` takes the one sheet Stylelint lints whose line `@import "tailwindcss"` (or `'tailwindcss'`, with `source(…)` or a layer after it) loads the theme, and writes it into `.oxlintrc.jsonc` as `settings.tailwindcss.entryPoint` and into `.oxfmtrc.jsonc` as `sortTailwindcss.stylesheet`. The plugin loads as `@workerstack/repo/tailwind`, so it resolves from this package's install. Without such a sheet nothing changes.
 
 ```text
 src/app.tsx:5:20: error tailwindcss(no-unknown-classes): "bg-foo-bar" is not a valid Tailwind class.
 src/app.tsx:5:20: error tailwindcss(no-duplicate-classes): Duplicate class: "flex". Removing the second occurrence.
+src/app.tsx:6:25: error repo(no-undefined-var): "--ui-nope" is not defined by src/app.css or a sheet it imports. Fix the name, define it in a sheet, or list it in lint.tailwind.vars when code sets it at runtime.
+src/app.tsx:7:30: error tailwindcss(no-dynamic-classes): "bg-${x}" is built at runtime, so Tailwind never sees it written out and generates no CSS for it. Write out the full class names (for example, a map from each value to its class) instead.
 ```
 
-When two or more sheets import tailwindcss, sync fails and asks for `lint.tailwind.entryPoint`, the repo-relative sheet to check classes against; one that is no file or does not import tailwindcss fails sync too. A `lint.skip` entry may name a `tailwindcss/<rule>` only while an entry turns the rules on.
+`repo/no-undefined-var` fails each `var(--x)` and `utility-(--x)` (also `utility-(length:--x)`) in a string or template when no sheet reachable from the entry through `@import` or `@reference` declares `--x` (a `--x:` declaration or `@property --x`), the file does not set `--x` itself (a `[--x:…]` class, or the string `"--x"` as a style key or `setProperty` name) and `lint.tailwind.vars` does not list it; a fallback does not exempt a typo. The sheets resolve as Tailwind resolves them, so `@import "tailwindcss"` and a package's `style` export work, and an import that does not resolve is reported in place of the vars it would hide. The sheets are read only when a file uses a var it does not set. `tailwindcss/no-dynamic-classes` fails a class built at runtime, such as `` `bg-${x}` ``, which Tailwind never sees written out.
+
+`lint.tailwind.vars` lists the custom properties code sets at runtime, like `vars: ["--anchor-width", "--toast-*"]` (a trailing `*` matches a prefix); each entry matches `^--[a-z0-9-]+\*?$`, and sync keeps them beside a found entry. When two or more sheets import tailwindcss, sync fails and asks for `lint.tailwind.entryPoint`, the repo-relative sheet to check classes against; one that is no file or does not import tailwindcss fails sync too. A `lint.skip` entry may name a `tailwindcss/<rule>` only while an entry turns the rules on.
 
 ## Fixture folders
 

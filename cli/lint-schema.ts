@@ -14,6 +14,12 @@ import { isReason } from "./lint/is-reason.ts";
 const REASON_ERROR = "say why the rules are off, in three words or more";
 const SKIP_LIST = "must be a list of { files, rules, reason } entries";
 const TAG_NAME = 'must be a tag name like "ui"';
+
+/** A custom property name, or a prefix of them with a trailing `*`. */
+const VAR_NAME = /^--[a-z0-9-]+\*?$/;
+
+const VAR_LIST = 'must be a list like ["--anchor-width", "--toast-*"]';
+
 const ENTRY_POINT = "must be a repo-relative path to a .css file";
 const PARENT = "..";
 const PLUGIN_NAME = 'must be a lowercase kebab-case name, like "app"';
@@ -154,11 +160,28 @@ function ruleEntrySchema(): RuleEntrySchema {
   );
 }
 
-/** `lint.tailwind`: the entry sheet; whether it is a file importing tailwindcss is sync's check, which reads it. */
+/** The message for a `lint.tailwind.vars` entry that names no custom property or prefix, showing the entry. */
+function varMessage(issue: { input?: unknown }): string {
+  return (
+    `${JSON.stringify(issue.input)} is not a custom property name like "--anchor-width" ` +
+    'or a prefix like "--toast-*"'
+  );
+}
+
+/**
+ * `lint.tailwind`: the entry sheet, which sync finds when unset (whether it is a file importing tailwindcss is sync's
+ * check, which reads it), and the vars code sets at runtime.
+ */
 function tailwindSchema(): TailwindSchema {
   return z.strictObject(
-    { entryPoint: z.string({ error: ENTRY_POINT }).refine(isRepoCss, { error: ENTRY_POINT }) },
-    { error: 'must be an object like { entryPoint: "src/app.css" }' },
+    {
+      entryPoint: z.string({ error: ENTRY_POINT }).refine(isRepoCss, { error: ENTRY_POINT }).optional(),
+      vars: z
+        .array(z.string({ error: varMessage }).regex(VAR_NAME, { error: varMessage }), { error: VAR_LIST })
+        .readonly()
+        .default([]),
+    },
+    { error: 'must be an object like { entryPoint: "src/app.css", vars: ["--anchor-width"] }' },
   );
 }
 
@@ -185,7 +208,13 @@ type RuleEntrySchema = z.ZodObject<
   z.core.$strict
 >;
 
-type TailwindSchema = z.ZodObject<{ entryPoint: z.ZodString }, z.core.$strict>;
+type TailwindSchema = z.ZodObject<
+  {
+    entryPoint: z.ZodOptional<z.ZodString>;
+    vars: z.ZodDefault<z.ZodReadonly<z.ZodArray<z.ZodString>>>;
+  },
+  z.core.$strict
+>;
 
 type LintSchema = z.ZodObject<
   {

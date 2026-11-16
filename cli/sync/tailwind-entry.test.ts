@@ -32,7 +32,7 @@ function entryOf(files: Record<string, string>, entryPoint?: string): string | s
   const lint: ResolvedLint =
     entryPoint === undefined
       ? { plugins: {}, rules: [], skip: [] }
-      : { plugins: {}, rules: [], skip: [], tailwind: { entryPoint } };
+      : { plugins: {}, rules: [], skip: [], tailwind: { entryPoint, vars: [] } };
 
   const resolved = withTailwindEntry(root, lint);
 
@@ -95,6 +95,32 @@ it("an entryPoint that is no file, or does not import tailwindcss, is refused", 
   ]);
 });
 
+it("a found entry keeps the configured vars, and a found entry with none configured has no vars", () => {
+  const root = checkout({ "src/app.css": IMPORT });
+  const lint: ResolvedLint = { plugins: {}, rules: [], skip: [], tailwind: { vars: ["--anchor-width"] } };
+
+  expect(withTailwindEntry(root, lint)).toMatchObject({
+    lint: { tailwind: { entryPoint: "src/app.css", vars: ["--anchor-width"] } },
+  });
+  expect(withTailwindEntry(root, { plugins: {}, rules: [], skip: [] })).toMatchObject({
+    lint: { tailwind: { entryPoint: "src/app.css", vars: [] } },
+  });
+});
+
+it("a configured entry keeps the vars, and vars with no sheet to find leave the lint as it is", () => {
+  const tailwind = { entryPoint: "src/app.css", vars: ["--x"] };
+  const lint: ResolvedLint = { plugins: {}, rules: [], skip: [], tailwind };
+
+  expect(withTailwindEntry(checkout({ "src/app.css": IMPORT }), lint)).toStrictEqual({ lint, ok: true });
+
+  const bare: ResolvedLint = { plugins: {}, rules: [], skip: [], tailwind: { vars: ["--x"] } };
+
+  expect(withTailwindEntry(checkout({ "src/a.ts": "export const a = 1;\n" }), bare)).toStrictEqual({
+    lint: bare,
+    ok: true,
+  });
+});
+
 /** The generated config at `rel` under `root`, parsed as JSONC and read as JSON. */
 function generated(root: string, rel: string): Json {
   return z.json().parse(parse(fs.readFileSync(path.join(root, rel), "utf8")));
@@ -114,6 +140,7 @@ it("repo sync gives oxlint and the oxfmt config the one entry, and refuses a sec
   expect(await runSync([], io, { generators: [] })).toBe(0);
   expect(generated(root, ".oxfmtrc.jsonc")).toMatchObject({ sortTailwindcss: { stylesheet: "src/app.css" } });
   expect(generated(root, ".oxlintrc.jsonc")).toMatchObject({
+    rules: { "repo/no-undefined-var": ["error", { entryPoint: "src/app.css", vars: [] }] },
     settings: { tailwindcss: { entryPoint: "src/app.css" } },
   });
   write(root, { "src/admin.css": IMPORT });

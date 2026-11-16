@@ -114,3 +114,42 @@ it.each(["/srv/app.css", "../app.css", "src/../../app.css", "src/app.scss", "", 
     );
   },
 );
+
+/** A standards config whose `lint.tailwind` is the object literal `tailwind`. */
+function varsConfig(tailwind: string): string {
+  return `export default { packs: ["standards"], lint: { tailwind: ${tailwind} } }\n`;
+}
+
+it("lint.tailwind.vars: names and prefixes resolve as written, and an entry is not needed", async () => {
+  expect(await loadConfig(repo(varsConfig('{ vars: ["--anchor-width", "--toast-*"] }')))).toMatchObject({
+    config: { lint: { tailwind: { vars: ["--anchor-width", "--toast-*"] } } },
+    ok: true,
+  });
+});
+
+it("lint.tailwind: vars default to none beside an entryPoint", async () => {
+  expect(await loadConfig(repo(tailwindConfig("src/app.css")))).toMatchObject({
+    config: { lint: { tailwind: { entryPoint: "src/app.css", vars: [] } } },
+    ok: true,
+  });
+});
+
+it.each(["anchor-width", "--Anchor", "--toast-**", "--", "--a b", "", 7])(
+  "lint.tailwind.vars: refuses the entry %j",
+  async (entry) => {
+    const text = JSON.stringify(entry);
+
+    expect(await loadConfig(repo(varsConfig(`{ vars: [${text}] }`)))).toStrictEqual(
+      refusal(
+        `lint.tailwind.vars[0]: ${text} is not a custom property name like "--anchor-width" ` +
+          'or a prefix like "--toast-*"',
+      ),
+    );
+  },
+);
+
+it("lint.tailwind.vars: refuses a list that is not an array", async () => {
+  expect(await loadConfig(repo(varsConfig('{ vars: "--x" }')))).toStrictEqual(
+    refusal('lint.tailwind.vars: must be a list like ["--anchor-width", "--toast-*"]'),
+  );
+});

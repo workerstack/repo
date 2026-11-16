@@ -55,6 +55,7 @@ const TAILWIND_PLUGIN = { name: "tailwindcss", specifier: "@workerstack/repo/tai
 const TAILWIND_RULES = {
   "tailwindcss/no-conflicting-classes": "error",
   "tailwindcss/no-duplicate-classes": "error",
+  "tailwindcss/no-dynamic-classes": "error",
   "tailwindcss/no-hardcoded-colors": "error",
   "tailwindcss/no-unknown-classes": "error",
 } as const satisfies Readonly<Record<string, RuleSetting>>;
@@ -109,13 +110,26 @@ function isOn(setting: RuleSetting) {
   return (Array.isArray(setting) ? setting[0] : setting) === ERROR_SEVERITY;
 }
 
-/** The tailwindcss plugin, its entry sheet as settings and its rules, with an entry; none of them without one. */
+/** `repo/no-undefined-var` at error with the entry sheet and the runtime vars. */
+type UndefinedVarSetting = readonly ["error", { entryPoint: string; vars: readonly string[] }];
+
+/**
+ * The tailwindcss plugin, its entry sheet as settings and its rules, and `repo/no-undefined-var` with the entry and the
+ * runtime vars as its options, with an entry; none of them without one. The var rule is not in `RULES`, which is on in
+ * every config.
+ */
 function tailwindParts(lint: ResolvedLint) {
-  const entryPoint = lint.tailwind?.entryPoint;
+  const { tailwind } = lint;
 
-  if (entryPoint === undefined) return { plugins: [], rules: {}, settings: {} };
+  if (tailwind?.entryPoint === undefined) return { plugins: [], rules: {}, settings: {} };
+  const { entryPoint, vars } = tailwind;
+  const undefinedVar: UndefinedVarSetting = ["error", { entryPoint, vars }];
 
-  return { plugins: [TAILWIND_PLUGIN], rules: TAILWIND_RULES, settings: { settings: { tailwindcss: { entryPoint } } } };
+  return {
+    plugins: [TAILWIND_PLUGIN],
+    rules: { ...TAILWIND_RULES, "repo/no-undefined-var": undefinedVar },
+    settings: { settings: { tailwindcss: { entryPoint } } },
+  };
 }
 
 /**
@@ -218,10 +232,10 @@ function overridesOf(workspace: Workspace, lint: ResolvedLint) {
  * `lint.skip` entry is an override written last, so it turns off only its rules for only its files, and
  * `lint.boundaries`, checked against the workspace, is the options of `repo/boundaries`. `rust` is whether the root has
  * a Cargo.toml, which is what lets a skip name a Rust rule. `lint.tailwind`, the entry sync found or was given, adds
- * the tailwindcss plugin with the entry as its settings and its four class rules. `lint.plugins` load after them, from
- * `./<file>` beside the config, and each `lint.rules` entry is top-level rules (no `files`) or an override written
- * after the stock and package ones and before the skips, so a skip can turn a consumer rule off; a skip may name any
- * rule an entry turns on.
+ * the tailwindcss plugin with the entry as its settings and its class rules and `repo/no-undefined-var`.
+ * `lint.plugins` load after them, from `./<file>` beside the config, and each `lint.rules` entry is top-level rules
+ * (no `files`) or an override written after the stock and package ones and before the skips, so a skip can turn a
+ * consumer rule off; a skip may name any rule an entry turns on.
  */
 export function oxlintConfig(
   workspace: Workspace,

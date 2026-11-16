@@ -36,6 +36,7 @@ const RULE_NAMES = [
   "no-runtime-typeof",
   "no-shape-in-symbol-names",
   "no-side-effect-import",
+  "no-undefined-var",
   "no-unknown-parameters",
   "no-unknown-returns",
   "no-unknown-type-aliases",
@@ -50,7 +51,7 @@ const RULE_NAMES = [
   "types-file",
 ];
 
-it("is the plugin `repo` with the thirty-five rules the generated config turns on", () => {
+it("is the plugin `repo` with the thirty-six rules the generated config turns on", () => {
   expect(plugin.meta.name).toBe("repo");
   expect(Object.keys(plugin.rules).toSorted()).toStrictEqual(RULE_NAMES);
 });

@@ -15,7 +15,13 @@ const ROOT: Workspace = {
   root: "/repo",
 };
 
-const ENTRY: ResolvedLint = { plugins: {}, rules: [], skip: [], tailwind: { entryPoint: "src/app.css" } };
+const ENTRY: ResolvedLint = {
+  plugins: {},
+  rules: [],
+  skip: [],
+  tailwind: { entryPoint: "src/app.css", vars: ["--anchor-width", "--toast-*"] },
+};
+
 const REPO_PLUGIN = { name: "repo", specifier: "@workerstack/repo/lint" };
 
 type Written = { jsPlugins: unknown; overrides: unknown[]; rules: JsonObject; settings?: unknown };
@@ -29,11 +35,14 @@ function written(lint: ResolvedLint): Written {
   return JSON.parse(built.value) /* the config sync writes */ as Written;
 }
 
+/** The rules the generated config sets for the tailwind entry: tailwindcss's and the repo's var rule. */
 function tailwindRules(config: Written): JsonObject {
-  return Object.fromEntries(Object.entries(config.rules).filter(([rule]) => rule.startsWith("tailwindcss/")));
+  return Object.fromEntries(
+    Object.entries(config.rules).filter(([rule]) => /^tailwindcss\/|^repo\/no-undefined-var$/.test(rule)),
+  );
 }
 
-it("an entry adds the tailwindcss plugin through this package, its entry as settings and four rules at error", () => {
+it("an entry adds the tailwindcss plugin, its settings, class rules and the var rule", () => {
   const config = written(ENTRY);
   expect(config.jsPlugins).toStrictEqual([
     REPO_PLUGIN,
@@ -41,10 +50,31 @@ it("an entry adds the tailwindcss plugin through this package, its entry as sett
   ]);
   expect(config.settings).toStrictEqual({ tailwindcss: { entryPoint: "src/app.css" } });
   expect(tailwindRules(config)).toStrictEqual({
+    "repo/no-undefined-var": ["error", { entryPoint: "src/app.css", vars: ["--anchor-width", "--toast-*"] }],
     "tailwindcss/no-conflicting-classes": "error",
     "tailwindcss/no-duplicate-classes": "error",
+    "tailwindcss/no-dynamic-classes": "error",
     "tailwindcss/no-hardcoded-colors": "error",
     "tailwindcss/no-unknown-classes": "error",
+  });
+});
+
+it("vars without an entry write neither the var rule nor a tailwindcss rule", () => {
+  const config = written({ plugins: {}, rules: [], skip: [], tailwind: { vars: ["--anchor-width"] } });
+  expect(config.jsPlugins).toStrictEqual([REPO_PLUGIN]);
+  expect(tailwindRules(config)).toStrictEqual({});
+});
+
+it("a skip may name repo/no-undefined-var only when an entry turns it on", () => {
+  const skip = { files: ["src/menu.tsx"], reason: "the host sets its vars", rules: ["repo/no-undefined-var"] };
+
+  expect(written({ ...ENTRY, skip: [skip] }).overrides.at(-1)).toStrictEqual({
+    files: ["src/menu.tsx"],
+    rules: { "repo/no-undefined-var": "off" },
+  });
+  expect(oxlintConfig(ROOT, { plugins: {}, rules: [], skip: [skip] })).toStrictEqual({
+    errors: ['repo.config.ts: lint.skip[0].rules: "repo/no-undefined-var" is not a rule the generated config runs'],
+    ok: false,
   });
 });
 

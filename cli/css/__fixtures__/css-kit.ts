@@ -79,12 +79,28 @@ export const SHEETS: Record<string, string> = {
   "src/unknown.css": UNKNOWN_CSS,
 };
 
-/** A Tailwind v4 entry with the import alone, so the theme is the tailwindcss package the kit resolves. */
-export const TAILWIND_CSS = '@import "tailwindcss";\n';
+/**
+ * A Tailwind v4 entry: the theme is the tailwindcss package the kit resolves, and a second sheet defines `--ui-good`.
+ */
+export const VARS_ENTRY_CSS = '@import "tailwindcss";\n@import "./vars.css";\n';
 
-/** A duplicate, a conflict, a hard-coded colour and an unknown class, on one attribute whose value starts at 2:25. */
-export const BAD_CLASSES_TSX =
-  'export function App() {\n  return <div className="flex flex p-2 p-4 text-[#ff0000] bg-foo-bar">x</div>;\n}\n';
+/** The imported sheet: `--ui-good` is defined, `--ui-nope` is not. */
+export const VARS_CSS = ":root {\n  --ui-good: 1;\n}\n";
+
+/**
+ * A duplicate, a conflict, a hard-coded colour and an unknown class on one attribute whose value starts at 2:25; then
+ * an undefined var in `var()` and in `bg-(…)`, beside defined ones, and a class built at runtime.
+ */
+export const BAD_CLASSES_TSX = [
+  "export function App() {",
+  '  return <div className="flex flex p-2 p-4 text-[#ff0000] bg-foo-bar">x</div>;',
+  "}",
+  "",
+  'export const style = { color: "var(--ui-nope)", width: "var(--ui-good)" };',
+  'export const utility = "bg-(--ui-nope) w-(length:--ui-good)";',
+  "export const pieced = (x: string) => <b class={`bg-${x}`}>x</b>;",
+  "",
+].join("\n");
 
 /** Theme classes only, none repeated or in conflict. */
 export const CLEAN_CLASSES_TSX = 'export function Clean() {\n  return <p className="flex p-4 text-red-500">ok</p>;\n}\n';

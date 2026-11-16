@@ -51,7 +51,7 @@ export function context({
       agents: { ...AGENT_DEFAULTS, hosts, skills: [] },
       packs,
       ...BASE_CONFIG,
-      lint: tailwind === undefined ? BASE_CONFIG.lint : { ...BASE_CONFIG.lint, tailwind: { entryPoint: tailwind } },
+      lint: tailwind === undefined ? BASE_CONFIG.lint : { ...BASE_CONFIG.lint, tailwind: { entryPoint: tailwind, vars: [] } },
     },
     read: (rel) => files[rel] ?? null,
     root: "/repo",
