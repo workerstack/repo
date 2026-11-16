@@ -60,10 +60,11 @@ const ERROR_RULES = [
 /** The rules the base opts out of, which the config writes as "off". */
 const REJECTED = [
   "eslint/one-var eslint/id-length typescript/prefer-readonly-parameter-types",
-  "typescript/explicit-function-return-type unicorn/no-null eslint/no-ternary vitest/prefer-expect-assertions",
+  "typescript/explicit-function-return-type unicorn/no-null unicorn/no-useless-undefined eslint/no-ternary",
+  "vitest/prefer-expect-assertions",
   "vitest/require-test-timeout eslint/no-magic-numbers typescript/prefer-optional-chain",
   "eslint/no-negated-condition typescript/no-unsafe-type-assertion typescript/consistent-type-definitions",
-  "vitest/prefer-called-with",
+  "vitest/prefer-called-with typescript/no-meaningless-void-operator typescript/no-unnecessary-type-assertion",
 ]
   .join(" ")
   .split(" ");
@@ -85,7 +86,6 @@ const OPTION_RULES = {
     "error",
     { allowNullableObject: false, allowNumber: false, allowString: false },
   ],
-  "unicorn/no-useless-undefined": ["error", { checkArguments: false }],
   "vitest/valid-expect": ["error", { maxArgs: 2 }],
 };
 

@@ -119,8 +119,6 @@ export const RULES = {
   "unicorn/no-await-expression-member": "error",
   "unicorn/prefer-string-replace-all": "error",
 
-  // an argument of `undefined` fills a required `T | undefined` parameter so dropping it fails tsc
-  "unicorn/no-useless-undefined": ["error", { checkArguments: false }],
   "vitest/valid-expect": ["error", { maxArgs: 2 }],
 } as const;
 
@@ -135,11 +133,17 @@ export const OFF_RULES = {
 is safe: an augmenting interface cannot become a type; repo/consistent-type-definitions owns it.`,
   "typescript/explicit-function-return-type":
     "Inference of the return type is exact, so writing it out only repeats it.",
+  "typescript/no-meaningless-void-operator": `Its fixer changes types: \`return void x\` becomes \`return x\`, \
+which widens the function's result from undefined to x's type.`,
+  "typescript/no-unnecessary-type-assertion": `Its fixer drops casts tsc needs: it reads a file outside every \
+tsconfig with default options, and it takes an assertion the receiver accepts as needless, \`as never\` included.`,
   "typescript/no-unsafe-type-assertion": `repo/as-needs-reason owns \`as\` (a narrowing assertion takes a \
 reason comment), and disable comments are refused, so this rule would leave no way to write one`,
   "typescript/prefer-optional-chain": "It is a nursery rule whose autofix is dangerous.",
   "typescript/prefer-readonly-parameter-types": "It fails parameters of library types the repo cannot make readonly.",
   "unicorn/no-null": "JSON and the tsgo APIs return null, so the code has to handle it.",
+  "unicorn/no-useless-undefined": `Its fixer changes types: \`return undefined\` becomes \`return\`, which \
+types a callback's result as void, and an argument of undefined fills a required \`T | undefined\` parameter.`,
   "vitest/prefer-called-with": `Its fixer rewrites code it cannot know \
 is safe: lint cannot know a call's arguments; repo/prefer-called-with owns it.`,
   "vitest/prefer-expect-assertions": "vitest/expect-expect already checks that an assertion ran in each test.",

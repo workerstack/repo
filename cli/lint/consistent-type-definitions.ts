@@ -1,12 +1,13 @@
 /**
  * Ported from typescript-eslint (MIT, see typescript-eslint.LICENSE): `consistent-type-definitions`. It differs in
- * three ways: an interface that may augment (in `declare module`, `declare global`, or a global script) is left alone,
- * `extends` types come before the body, and the fix ends the type with a semicolon.
+ * four ways: an interface that may augment (in `declare module`, `declare global`, or a global script) is left alone,
+ * so is one that merges with another declaration of its name (a class, a function, a namespace or another
+ * interface), `extends` types come before the body, and the fix ends the type with a semicolon.
  */
 import { AST_NODE_TYPES } from "@typescript-eslint/types";
 import type { TSESLint, TSESTree } from "@typescript-eslint/utils";
 
-import { INTERFACE_KEYWORD, MODULE_STATEMENTS } from "./consistent-type-definitions.constants.ts";
+import { INTERFACE_KEYWORD, MERGING_DECLARATIONS, MODULE_STATEMENTS } from "./consistent-type-definitions.constants.ts";
 import { nullThrows } from "./null-throws.ts";
 import type { RepoRule } from "./rule.types.ts";
 
@@ -23,6 +24,32 @@ function isInAmbientBlock(node: TSESTree.Node): boolean {
 /** Whether `program` is a module: it imports or exports. */
 function isModule(program: TSESTree.Program): boolean {
   return program.body.some((statement) => MODULE_STATEMENTS.includes(statement.type));
+}
+
+/** The name `statement` declares when it is a declaration an interface can merge with, unwrapping an export. */
+function mergeableName(statement: TSESTree.Node): string | null {
+  const declaration =
+    statement.type === AST_NODE_TYPES.ExportNamedDeclaration ||
+    statement.type === AST_NODE_TYPES.ExportDefaultDeclaration
+      ? statement.declaration
+      : statement;
+
+  if (declaration === null || !MERGING_DECLARATIONS.includes(declaration.type)) return null;
+  const id = "id" in declaration ? declaration.id : null;
+
+  return id?.type === AST_NODE_TYPES.Identifier ? id.name : null;
+}
+
+/**
+ * Whether another declaration in the statement list that holds `node` has its name: the two merge, and a type alias
+ * cannot, so the rewrite would be a duplicate identifier and drop the merged members.
+ */
+function mergesWithAnother(node: TSESTree.TSInterfaceDeclaration): boolean {
+  const statement = node.parent.type === AST_NODE_TYPES.ExportNamedDeclaration ? node.parent : node;
+  const list = statement.parent;
+  const body = list.type === AST_NODE_TYPES.Program || list.type === AST_NODE_TYPES.TSModuleBlock ? list.body : [];
+
+  return body.some((other) => other !== statement && mergeableName(other) === node.id.name);
 }
 
 /** The fixes that turn `node` into `type Name<T> = A & B & { … };`, keeping `export` and `declare`. */
@@ -47,14 +74,17 @@ function fixOf(
   };
 }
 
-/** Fails an interface that could be a type; one that may augment a module or the globals is left alone. */
+/**
+ * Fails an interface that could be a type; one that may augment a module or the globals, or that merges with another
+ * declaration of its name, is left alone.
+ */
 export const consistentTypeDefinitions: RepoRule<"useType"> = {
   create(context) {
     const { sourceCode } = context;
 
     return {
       TSInterfaceDeclaration(node) {
-        if (isInAmbientBlock(node) || !isModule(sourceCode.ast)) return;
+        if (isInAmbientBlock(node) || !isModule(sourceCode.ast) || mergesWithAnother(node)) return;
         const isFixable = node.parent.type !== AST_NODE_TYPES.ExportDefaultDeclaration;
 
         context.report({

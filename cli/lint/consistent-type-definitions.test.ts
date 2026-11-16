@@ -19,6 +19,23 @@ describe("consistent-type-definitions", () => {
   });
 });
 
+describe("consistent-type-definitions merging", () => {
+  it.each([
+    ["export interface A {\n  a: string;\n}\n\nexport class A {}\n"],
+    ["export class A {}\n\ninterface A {\n  a: string;\n}\n"],
+    ["export interface A {\n  a: string;\n}\n\nexport interface A {\n  b: string;\n}\n"],
+    ["export function A(): void {}\n\nexport interface A {\n  a: string;\n}\n"],
+    ["export interface A {\n  a: string;\n}\n\nexport namespace A {}\n"],
+  ])("does not report or fix an interface that merges with another declaration of its name: %j", (code) => {
+    expect(countOf(code)).toBe(0);
+    expect(fixedOf(consistentTypeDefinitions, code)).toBe(code);
+  });
+
+  it("still reports an interface whose name only a declaration in another scope shares", () => {
+    expect(countOf("export interface A { a: string }\nexport function f(): void {\n  class A {}\n}\n")).toBe(1);
+  });
+});
+
 describe("consistent-type-definitions fixes", () => {
   it("rewrites a plain exported generic interface in a module", () => {
     const code = "export interface Box<T> { value: T }\n";
