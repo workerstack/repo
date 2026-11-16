@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-16
+
 ### Changed
 
 - `repo sync` sets up the `devEngines.runtime` node range in the ci test job whenever a package declares one, not only with a `vitest.node.config.ts`, so a package whose tests spawn node (wrangler, say) gets node instead of having it removed.
