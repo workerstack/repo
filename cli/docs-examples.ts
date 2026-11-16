@@ -31,6 +31,7 @@ import {
 } from "./docs.constants.ts";
 import { removeTree } from "./remove-tree.ts";
 import type { Captured } from "./scripts/lint.ts";
+import { configOf, withTsApi } from "./ts-api.ts";
 
 /** The tools an example check runs: `tsc` with its arguments, and `bun`. Each runs in `cwd` and is captured. */
 export type ExampleTools = {
@@ -91,8 +92,25 @@ function fileOf(block: Block): string {
   return `${block.rel}-${block.n}.${block.ext}`;
 }
 
-/** Writes each block and a tsconfig that extends the doc root's (or the stock bun one) and lists only the blocks. */
-function writeScratch(ctx: ExampleRoot, blocks: readonly Block[]): string {
+/**
+ * The absolute `files` the config at `file` inherits through its extends chain, such as the stock bun config's
+ * reset.d.ts and bun.d.ts. A probe that extends it with no `files` of its own and an empty `include` lists exactly
+ * those. A config TypeScript cannot read lists none, and the type-check names its error.
+ */
+async function inheritedFiles(scratch: string, file: string): Promise<readonly string[]> {
+  const probe = path.join(scratch, TSCONFIG_FILE);
+  fs.writeFileSync(probe, JSON.stringify({ extends: file, include: [] }));
+
+  const read = await withTsApi(scratch, (run) => configOf(run, probe.replaceAll("\\", "/")));
+
+  return read.ok ? read.value.fileNames : [];
+}
+
+/**
+ * Writes each block and a tsconfig that extends the doc root's (or the stock bun one) and lists the files that
+ * config inherits, then the blocks.
+ */
+async function writeScratch(ctx: ExampleRoot, blocks: readonly Block[]): Promise<string> {
   const scratch = path.join(ctx.root, SCRATCH_DIR, ctx.dir);
   const own = path.join(ctx.root, ctx.dir, TSCONFIG_FILE);
   removeTree(scratch);
@@ -104,11 +122,12 @@ function writeScratch(ctx: ExampleRoot, blocks: readonly Block[]): string {
   }
 
   const stock = path.join(import.meta.dirname, "..", "tsconfig", STOCK_TSCONFIG);
+  const base = (fs.existsSync(own) ? own : stock).replaceAll("\\", "/");
 
   const config = {
     compilerOptions: { noEmit: true },
-    extends: (fs.existsSync(own) ? own : stock).replaceAll("\\", "/"),
-    files: blocks.map(fileOf),
+    extends: base,
+    files: [...(await inheritedFiles(scratch, base)), ...blocks.map(fileOf)],
     include: [],
   };
 
@@ -156,7 +175,7 @@ export async function checkExamples(
     if (built.code !== 0) return [buildFailed(ctx.dir, built.code, detailOf(built))];
   }
 
-  const scratch = writeScratch(ctx, blocks);
+  const scratch = await writeScratch(ctx, blocks);
   const typed = await tools.tsc([...TSC_ARGS, path.join(scratch, TSCONFIG_FILE)], scratch);
   const findings = typed.code === 0 ? [] : typeFindings(ctx, blocks, typed);
 

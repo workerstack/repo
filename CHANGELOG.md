@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `repo sync` sets up the `devEngines.runtime` node range in the ci test job whenever a package declares one, not only with a `vitest.node.config.ts`, so a package whose tests spawn node (wrangler, say) gets node instead of having it removed.
 
+### Fixed
+
+- `repo docs --check` now keeps the files the extended tsconfig lists, such as the stock bun config's reset.d.ts and bun.d.ts, so examples and the package sources they import keep their bun and node types.
+
 ## [0.2.0] - 2026-11-15
 
 ### Added

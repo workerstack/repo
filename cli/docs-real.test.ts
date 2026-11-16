@@ -33,8 +33,11 @@ const TSCONFIG = {
   },
 };
 
-/** A workspace whose package `@ws/a` has one `ts run` example and is linked into the root's install folder. */
-function workspace(example: string, manifest: Json = MANIFEST): string {
+/**
+ * A workspace whose package `@ws/a` has one `ts run` example and is linked into the root's install folder; `over`
+ * replaces or adds files.
+ */
+function workspace(example: string, manifest: Json = MANIFEST, over: Record<string, string> = {}): string {
   const root = tempRoot({
     "package.json": json({ name: "mono", private: true, workspaces: ["packages/*"] }),
     "packages/a/index.ts": "export const answer = 42;\n",
@@ -44,6 +47,7 @@ function workspace(example: string, manifest: Json = MANIFEST): string {
       "\n",
     ),
     "packages/a/tsconfig.json": json(TSCONFIG),
+    ...over,
   });
 
   fs.mkdirSync(path.join(root, "node_modules/@ws"), { recursive: true });
@@ -61,6 +65,35 @@ it("type-checks and runs a package's example that imports its own name, under it
   expect(await main(["--check"], run.io)).toBe(0);
   expect(run.err).toStrictEqual([]);
   expect(run.out).toStrictEqual(["docs ok: 2 references, 1 examples, 1 exports, tarball holds references/\n"]);
+});
+
+it("keeps the bun and node types of the stock config a package tsconfig extends", async () => {
+  const stock = path.join(import.meta.dirname, "..", "tsconfig", "bun.json").replaceAll("\\", "/");
+
+  const source = [
+    'import fs from "node:fs";',
+    "",
+    "export const cwd: string = process.cwd();",
+    "export const env: NodeJS.ProcessEnv = process.env;",
+    "export const here: boolean = fs.existsSync(cwd);",
+    "",
+  ].join("\n");
+
+  const example = [
+    'import fs from "node:fs";',
+    'import { cwd, here } from "@ws/a";',
+    'if (!here || !fs.existsSync(cwd) || process.cwd() !== cwd) throw new Error("bad");',
+  ].join("\n");
+
+  const over = {
+    "packages/a/index.ts": source,
+    "packages/a/tsconfig.json": json({ extends: stock, include: ["*.ts"] }),
+  };
+
+  const run = docsRun(workspace(example, MANIFEST, over), REAL_TOOLS);
+
+  expect(await main(["--check"], run.io)).toBe(0);
+  expect(run.err).toStrictEqual([]);
 });
 
 it("maps a real tsc error and a real thrown error to their markdown lines", async () => {
