@@ -34,8 +34,11 @@ const BUN_ONLY = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-bun-only-"))
 
 fs.symlinkSync(process.execPath, path.join(BUN_ONLY, "bun"));
 
-// The real git, wherever this host keeps it; its own dir may hold node too, so only git is linked in.
-fs.symlinkSync(fs.realpathSync(Bun.which("git") ?? "git"), path.join(BUN_ONLY, "git"));
+// The real git, wherever this host keeps it; its own dir may hold node too, so only git is linked in, under its own
+// file name so Windows still finds `git.exe`.
+const GIT = fs.realpathSync(Bun.which("git") ?? "git");
+
+fs.symlinkSync(GIT, path.join(BUN_ONLY, path.basename(GIT)));
 
 afterAll(() => removeTree(BUN_ONLY));
 
