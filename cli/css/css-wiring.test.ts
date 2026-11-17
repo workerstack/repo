@@ -49,6 +49,9 @@ it(
     io.clear();
     // oxlint, handed a CSS path only, exits 1 on finding no file; it is not run.
     expect(await lintMain(["src/app.css"])).toBe(0);
+    expect(io.stdout()).toStrictEqual(["repo lint: no hits\n"]);
+    io.clear();
+    expect(await lintMain(["--all", "src/app.css"])).toBe(0);
     expect(io.stdout()).toStrictEqual([]);
   },
 );

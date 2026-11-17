@@ -17,6 +17,9 @@ const BLOCK_LINE =
   "src/lib.rs:2:1: error repo(rust-block-comment): " +
   "Rust comments use the line form (//, ///, //!); rewrite this /* */ as // lines";
 
+const BLOCK = { file: "src/lib.rs", line: BLOCK_LINE, rule: "repo(rust-block-comment)" };
+const UNWRAP = { file: "src/lib.rs", line: UNWRAP_LINE, rule: "clippy(unwrap_used)" };
+
 const LIB = "pub fn f() {}\n/* old */\npub fn g(s: &str) -> u8 { s.parse().unwrap() }\n";
 const CARGO_TOML = '[package]\nname = "app"\nversion = "0.1.0"\nedition = "2021"\n';
 const SKIP = { files: ["**/*.rs"], reason: "the input is checked", rules: ["clippy/unwrap_used"] };
@@ -132,23 +135,23 @@ it(
     };
 
     const root = checkout(files, [SKIP]);
-    expect(await scriptLintAt(root, WHOLE, unwrap)).toStrictEqual({ lines: [BLOCK_LINE], problems: [] });
+    expect(await scriptLintAt(root, WHOLE, unwrap)).toStrictEqual({ kept: [BLOCK], problems: [] });
     const open = checkout(files);
-    expect(await scriptLintAt(open, WHOLE, unwrap)).toStrictEqual({ lines: [BLOCK_LINE, UNWRAP_LINE], problems: [] });
+    expect(await scriptLintAt(open, WHOLE, unwrap)).toStrictEqual({ kept: [BLOCK, UNWRAP], problems: [] });
     expect(await scriptLintAt(open, { clippy: false, paths: ["src/lib.rs", "src/a.ts"] }, noCargo)).toStrictEqual({
-      lines: [BLOCK_LINE],
+      kept: [BLOCK],
       problems: [],
     });
     expect(await scriptLintAt(open, { clippy: false, paths: ["src/a.ts"] }, noCargo)).toStrictEqual({
-      lines: [],
+      kept: [],
       problems: [],
     });
-    expect(await scriptLintAt(open, WHOLE, noCargo)).toStrictEqual({ lines: [], problems: [MISSING_CARGO] });
+    expect(await scriptLintAt(open, WHOLE, noCargo)).toStrictEqual({ kept: [], problems: [MISSING_CARGO] });
   },
 );
 
 it("scriptLintAt lints nothing without a config or the standards pack", { timeout: SLOW }, async () => {
-  const none = { lines: [], problems: [] };
+  const none = { kept: [], problems: [] };
   expect(
     await scriptLintAt(
       plant({ "Cargo.lock": cargoLock("app"), "Cargo.toml": CARGO_TOML, "src/lib.rs": LIB }),

@@ -22,15 +22,14 @@ import { BASELINE_PATH } from "./lint-baseline.constants.ts";
 import {
   countsOf,
   type Counts as Baseline,
-  excessText,
   gate,
   lintReport,
   readBaseline,
   writeBaseline,
   type Diagnostic,
-  type Excess,
 } from "./lint-baseline.ts";
 import { fixOverBaseline } from "./lint-fix-config.ts";
+import { outsideOver, overOutput } from "./lint-gate.ts";
 import { captureBun, captureSorted, captureTool, type Captured } from "./lint.ts";
 import { LINTABLE } from "./lintable.constants.ts";
 import type { TestRun } from "./node-run.ts";
@@ -123,21 +122,6 @@ export async function fmtStep(turn: Turn): Promise<StepResult> {
   return passed(touched.length === 0 ? "fmt ok" : `fmt ${touched.length} fixed`, touched);
 }
 
-/** The lint lines of each excess's rule in its file, then what to do about it. */
-function overOutput(command: GateName, over: readonly Excess[], diagnostics: readonly Diagnostic[]): string[] {
-  const lines = diagnostics
-    .filter((d) => over.some((e) => e.file === d.file && e.rule === d.rule))
-    .map((d) => `${d.line}\n`);
-
-  const fixes = over.map((e) => {
-    const added = e.has - e.allows;
-
-    return `repo ${command}: ${excessText(e)}; fix the ${added === 1 ? "new one" : `${added} new ones`}\n`;
-  });
-
-  return [...lines, ...fixes];
-}
-
 /** oxlint's report on `files`, or none to read when there are no files. */
 async function oxlintReport(root: string, files: readonly string[]): Promise<Report> {
   return files.length > 0 ? await lintReport(root, files) : { ok: true, value: [] };
@@ -179,17 +163,6 @@ async function withScripts(turn: Turn, files: readonly string[], report: Report)
 }
 
 /**
- * The excesses of the files outside the change set a changed test re-checked: only their script hits are known, so
- * they can fail the turn but never lower the baseline.
- */
-function outsideOver(baseline: Baseline, diagnostics: readonly Diagnostic[], linted: readonly string[]): Excess[] {
-  const outside = diagnostics.filter((d) => !linted.includes(d.file));
-  const files = [...new Set(outside.map((d) => d.file))];
-
-  return gate(baseline, countsOf(outside), files).over;
-}
-
-/**
  * Stylelint's fix and oxlint's fix of the rules a file is over its baseline on, the script checks on the lintable
  * files, stylesheets and Rust sources, then the baseline gate over those and the deleted ones.
  */
@@ -217,7 +190,9 @@ export async function lintStep(turn: Turn): Promise<StepResult> {
 
     for (const e of over) count += e.has - e.allows;
 
-    return failed(`lint ${count} over baseline`, overOutput(turn.command, over, report.value), touched);
+    const { hits, fixes } = overOutput(turn.command, over, report.value);
+
+    return failed(`lint ${count} over baseline`, [...hits, ...fixes], touched);
   }
 
   const lowered = result.lowered.map((l) => `${l.file} ${l.rule} ${l.from} → ${l.to}`).join(", ");

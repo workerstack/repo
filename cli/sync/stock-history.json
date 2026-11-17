@@ -2497,7 +2497,12 @@
   "cli/scripts/__fixtures__/json-dirs.ts": ["71f968b133ef2302", "f2741f663d7fabd3"],
   "cli/scripts/__fixtures__/lessons-kit.ts": ["14976cb04c55c1b2", "d4f284c6eb69d05b"],
   "cli/scripts/__fixtures__/lint-plugin-expected.ts": ["6a8331d75ed3f4d9", "d0a1ba2c8c4795f2"],
-  "cli/scripts/__fixtures__/lint-scripts-kit.ts": ["6d3a41ab5cb8d68b", "7b37a8425ab3d3a7", "d853ffaa4bcaddc5"],
+  "cli/scripts/__fixtures__/lint-scripts-kit.ts": [
+    "6d3a41ab5cb8d68b",
+    "7b37a8425ab3d3a7",
+    "ccb998d6f893a9c0",
+    "d853ffaa4bcaddc5"
+  ],
   "cli/scripts/__fixtures__/listen-env.ts": [
     "0aa69c297b2cecb0",
     "10697ad644a7bbfa",
@@ -5535,6 +5540,7 @@
   "cli/scripts/lint-consumer-plugin.test.ts": ["2e1b2772f0a8054b"],
   "cli/scripts/lint-fix-config.test.ts": ["d6f1e87dd0691531"],
   "cli/scripts/lint-fix-config.ts": ["35aa899c31fe0ad5"],
+  "cli/scripts/lint-gate.ts": ["7729f30313d2db28"],
   "cli/scripts/lint-jsonc.test.ts": [
     "038d9baa86e55b48",
     "03acaefd9b8db336",
@@ -5552,14 +5558,22 @@
     "3f5d3afe31961b63",
     "58c99c138f2c4a94",
     "5b7ad354f5e215fc",
+    "a534dfa67ad7c339",
     "c98e0dfedeb656ab",
     "ec0cd514e1f5e578"
   ],
-  "cli/scripts/lint-main.constants.ts": ["1a29acb0ca4af187", "5caf57c00bcb28d9", "90f791060f269c4b"],
+  "cli/scripts/lint-main-gate.test.ts": ["e06463ec2fb1365a"],
+  "cli/scripts/lint-main.constants.ts": [
+    "1a29acb0ca4af187",
+    "3a374403507d6f71",
+    "5caf57c00bcb28d9",
+    "90f791060f269c4b"
+  ],
   "cli/scripts/lint-main.test.ts": [
     "160b5a998cc794e1",
     "173247fd5a28b273",
     "1acd696bb6e6bfea",
+    "5000893222150cff",
     "542b0bf88616b4ed",
     "64756716d0397f6a",
     "69024747cf5d1274",
@@ -5583,6 +5597,7 @@
     "a0c15a2c6f45cff8",
     "a3a33ace8d5aec70",
     "bf2e51b23e2ea5ba",
+    "c6b5afb3fb2c6ee7",
     "c6f7e2839cdca1f2",
     "dc94810a5081afac"
   ],
@@ -5641,6 +5656,7 @@
   "cli/scripts/lint-rust.test.ts": [
     "2cfc1e94659b7112",
     "4251e85820cd56ff",
+    "4df8627b8e97ff81",
     "6167aec870666d61",
     "6fe388535c7674e4",
     "7933d2f2bc1fa5e8",
@@ -5772,6 +5788,7 @@
     "db742a9a082c1db6",
     "dfc422a7cdb51337",
     "ec1180c3c29eb359",
+    "eecb86f913b0ae17",
     "fa8a004317713c76"
   ],
   "cli/scripts/lint.ts": [
@@ -8404,6 +8421,7 @@
     "a9f0358303151a5d",
     "aa660528fab1472e",
     "aae0d4c430ea5890",
+    "b33b154d69f3cdc8",
     "b8c8ca417f7bd550",
     "bdcfe41619301dac",
     "c3edd9534c917be2",
@@ -8953,6 +8971,7 @@
     "42173e1ce7d819df",
     "4a2acbea1f7cd106",
     "4b4ce641bc6aee18",
+    "4c8bb8e359624e52",
     "4f25907c2b624360",
     "533cb1f40f54d8a9",
     "70beefe7facb8ff2",
@@ -9076,6 +9095,7 @@
     "27fb844347c693f0",
     "2899648d7103c529",
     "2eaef48f7824a4fc",
+    "32bad047ea49f801",
     "3665b9291d607f50",
     "3ecc2d57fc00efb9",
     "4b9692cd9139f976",

@@ -108,14 +108,14 @@ it("checkScriptsAt checks nothing without a config or the standards pack, and re
   expect(plainChecked.problems).toStrictEqual([expect.stringMatching(/^git ls-files failed: /)]);
 });
 
-it("scriptLintAt prints no line when the script checks cannot run, only what stops them", async () => {
+it("scriptLintAt keeps no hit when the script checks cannot run, only what stops them", async () => {
   const broken = checkout(
     { "pkg/a.ts": "export const f = () => 5;\n", "pkg/tsconfig.json": "{" },
     { packs: ["standards"] },
   );
 
   expect(await scriptLintAt(broken, { clippy: false, paths: null })).toStrictEqual({
-    lines: [],
+    kept: [],
     problems: [expect.stringMatching(/^pkg\/tsconfig\.json: .+/)],
   });
 });

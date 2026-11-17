@@ -10,3 +10,6 @@ export const LONG_FORMAT_PREFIX = "--format=";
 
 /** oxlint's flag that fixes what it can; Stylelint fixes the stylesheets under it too. */
 export const FIX_FLAG = "--fix";
+
+/** `repo lint`'s flag that prints every hit as oxlint does, baselined or not, and fails on one. */
+export const ALL_FLAG = "--all";

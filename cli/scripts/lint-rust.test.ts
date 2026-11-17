@@ -64,7 +64,7 @@ it("repo lint passes a clean crate, and leaves a skipped hit out", { timeout: CA
   const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   process.chdir(root);
   expect(await lintMain([])).toBe(0);
-  expect(printed(out)).toStrictEqual([]);
+  expect(printed(out)).toStrictEqual(["repo lint: no hits\n"]);
   const skip = { files: ["src/lib.rs"], reason: "the input is checked", rules: ["clippy/unwrap_used"] };
   const config = { lint: { skip: [skip] }, packs: ["standards"] };
   fs.writeFileSync(path.join(root, "repo.config.ts"), `export default ${JSON.stringify(config, null, 2)};\n`);
@@ -74,14 +74,14 @@ it("repo lint passes a clean crate, and leaves a skipped hit out", { timeout: CA
       "#[must_use]\npub fn g(s: &str) -> u8 {\n    s.parse().unwrap()\n}\n",
   );
   expect(await lintMain([])).toBe(0);
-  expect(printed(out)).toStrictEqual([]);
+  expect(printed(out)).toStrictEqual(["repo lint: no hits\n", "repo lint: no hits\n"]);
 });
 
 it("repo lint without a Cargo.toml runs no Rust rules", { timeout: SLOW }, async () => {
   const out = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
   process.chdir(consumer({ "src/lib.rs": USAGE }));
   expect(await lintMain([])).toBe(0);
-  expect(printed(out)).toStrictEqual([]);
+  expect(printed(out)).toStrictEqual(["repo lint: no hits\n"]);
 });
 
 it("repo lint reaches the .rs sources under a directory argument", { timeout: SLOW }, async () => {

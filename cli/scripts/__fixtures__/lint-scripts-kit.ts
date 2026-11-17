@@ -19,11 +19,11 @@ export const GUARD_TEST =
 /** A repo with the magic string in `src/a.ts` and a clean `src/b.ts`. */
 export const planted = (): string => consumer({ "src/a.ts": STRING_SOURCE, "src/b.ts": CLEAN_SOURCE });
 
-/** Writes the config with a `lint.skip` entry for `rule` in `file`. */
+/** Writes the config with a `lint.skip` entry for `rule` in `file`, indented as bun fmt leaves it. */
 export function skipIn(root: string, file: string, rule: string): void {
   const skip = { files: [file], rules: [rule], reason: "kept on purpose" };
   const config = { packs: ["standards"], lint: { skip: [skip] } };
-  fs.writeFileSync(path.join(root, "repo.config.ts"), `export default ${JSON.stringify(config)};\n`);
+  fs.writeFileSync(path.join(root, "repo.config.ts"), `export default ${JSON.stringify(config, null, 2)};\n`);
 }
 
 /** Spies on stdout and stderr; `lines` is what each was asked to print, one string per write. */

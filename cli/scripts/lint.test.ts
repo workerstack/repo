@@ -26,10 +26,16 @@ function repo(packs: string, files: Record<string, string> = {}): string {
   });
 }
 
-/** A PATH holding bun alone, so a tool that needs node fails; it lives as long as the file's tests. */
+/**
+ * A PATH holding bun and git alone, so a tool that needs node fails while lint still lists the files its baseline
+ * gate counts; it lives as long as the file's tests.
+ */
 const BUN_ONLY = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-bun-only-"));
 
 fs.symlinkSync(process.execPath, path.join(BUN_ONLY, "bun"));
+
+// The real git, wherever this host keeps it; its own dir may hold node too, so only git is linked in.
+fs.symlinkSync(fs.realpathSync(Bun.which("git") ?? "git"), path.join(BUN_ONLY, "git"));
 
 afterAll(() => removeTree(BUN_ONLY));
 
@@ -41,17 +47,17 @@ function standardsRepo(files: Record<string, string>): string {
   return repo('["standards"]', { ...standardsFiles(), ...files });
 }
 
-/** The env of a spawned repo command: bun alone on PATH. */
+/** The env of a spawned repo command: bun and git alone on PATH. */
 const env = childEnv({ PATH: BUN_ONLY });
 
-/** Runs `bun repo <args>` in `root` with bun alone on PATH; its exit code and its stdout then stderr. */
+/** Runs `bun repo <args>` in `root` with bun and git alone on PATH; its exit code and its stdout then stderr. */
 function repoCmd(root: string, ...args: string[]) {
   const run = spawnSync(process.execPath, [BIN, ...args], { cwd: root, encoding: "utf8", env });
 
   return { code: run.status, out: `${run.stdout}${run.stderr}` };
 }
 
-/** Puts bun alone on PATH before each test of the calling block, and returns to the starting cwd after each. */
+/** Puts bun and git alone on PATH before each test of the calling block, and returns to the starting cwd after each. */
 function useBunOnlyPath(): void {
   const saved = { cwd: process.cwd() };
   beforeEach(() => {
@@ -81,6 +87,8 @@ describe("repo lint and repo fmt with the pinned tools, node off PATH", () => {
 
   it("lint fails on a non-null assertion and, type-aware, on a floating promise", { timeout: SLOW }, () => {
     const root = repo('["standards"]', { "src/a.ts": `${NON_NULL}\n${FLOATING}` });
+    // The baseline gate counts the files git lists, so lint runs in a checkout.
+    expect(spawnSync("git", ["init", "-q"], { cwd: root, env }).status).toBe(0);
     expect(repoCmd(root, "sync").code).toBe(0);
     const linted = repoCmd(root, "lint");
     expect(linted.out).toContain("no-non-null-assertion");

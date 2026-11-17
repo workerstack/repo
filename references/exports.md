@@ -52,6 +52,20 @@ const names: string[] = Object.keys(plugin.rules);
 console.log(`${plugin.meta.name}: ${names.length} rules`);
 ```
 
+## Lint baseline
+
+`.repo/lint-baseline.json` holds, per file and rule, how many hits the repo still carries. `bun repo lint` gates on it as `bun repo precommit` does: it prints only the hits of a file and rule over its entry, each with the line that says by how many, and exits 1; anything else is one count line and exit 0. With paths it gates the files under them, and a guard hit a test among them re-checks in a file outside them counts too.
+
+```console
+$ bun repo lint
+repo lint: 25,690 hits within the baseline; --all prints them
+$ bun repo lint src/a.ts
+src/a.ts:3:1: error eslint(no-console): Unexpected console statement.
+repo lint: src/a.ts has 1 eslint(no-console), the baseline allows 0; fix the new one
+```
+
+A repo with no hit prints one line that says it has none. With no baseline file every hit is over an entry of 0. A baseline that cannot be read fails with the line `bun repo check` prints. `--fix` fixes every hit it can, prints nothing of it, then prints the gated report. `--all` prints every hit, oxlint's text then the script checks' lines, and fails on one. A machine format (`-f json`) prints oxlint's output alone. Lint never writes the baseline; `bun repo lint --baseline` lowers and seeds it, and `bun repo turn` and `bun repo precommit` lower the entries of the files they gate.
+
 ## Your own lint rules
 
 Under the `standards` pack, a repo runs its own oxlint JS plugins beside the stock rules. `lint.plugins` maps a name to a repo-relative `.js`, `.mjs` or `.ts` file that default-exports a plugin (`{ meta: { name }, rules: {} }`). `lint.rules` turns its rules on: each entry is `{ files?, rules }`, and each rule is `"error"` or `["error", options]`. An entry with no `files` applies everywhere.

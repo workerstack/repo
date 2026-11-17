@@ -155,8 +155,8 @@ export async function checkScriptsAt(cwd: string, run?: CargoRun): Promise<Scrip
  */
 export type LintScope = { paths: readonly string[] | null; clippy: boolean; fix?: boolean };
 
-/** What `repo lint` prints of the script checks: the hit lines no skip turns off, and why it could not check. */
-export type ScriptLint = { lines: string[]; problems: string[] };
+/** What `repo lint` takes of the script checks: the hits no skip turns off, and why it could not check. */
+export type ScriptLint = { kept: Diagnostic[]; problems: string[] };
 
 /** The `all` files that equal one of `paths` (given at `cwd`, root-relative to `root`) or lie under one. */
 function filesUnder(at: { root: string; cwd: string }, paths: readonly string[], all: readonly string[]): string[] {
@@ -194,19 +194,19 @@ async function lintHits(root: string, scope: CloneScope, options: RustOptions & 
 export async function scriptLintAt(cwd: string, scope: LintScope, run?: CargoRun): Promise<ScriptLint> {
   const checkout = await checkoutAt(cwd);
 
-  if (checkout === null) return { lines: [], problems: [] };
+  if (checkout === null) return { kept: [], problems: [] };
 
-  if (!checkout.files.ok) return { lines: [], problems: checkout.files.error };
+  if (!checkout.files.ok) return { kept: [], problems: checkout.files.error };
   const all = [...checkout.files.value, ...checkout.rust, ...checkout.css];
   const files = scope.paths === null ? all : filesUnder({ cwd, root: checkout.root }, scope.paths, all);
   const sources = checkout.files.value;
   const options = { clippy: scope.clippy, fix: scope.fix === true, run };
   const found = await lintHits(checkout.root, { files, sources }, options);
 
-  if (!found.ok) return { lines: [], problems: found.error };
+  if (!found.ok) return { kept: [], problems: found.error };
   const matched = [...files, ...found.value.map((d) => d.file)];
 
-  return { lines: withoutSkipped(found.value, checkout.skips, matched).map((d) => d.line), problems: [] };
+  return { kept: withoutSkipped(found.value, checkout.skips, matched), problems: [] };
 }
 
 /** `repo check`'s reject file problems for the repo at `cwd`: none without a config or the standards pack. */

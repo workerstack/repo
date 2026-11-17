@@ -4,8 +4,9 @@ import path from "node:path";
 import { afterEach, expect, it, vi } from "vitest";
 
 import { removeTree } from "../remove-tree.ts";
-import { cleanTemps, consumer, SLOW } from "./__fixtures__/baseline-repo.ts";
+import { cleanTemps, consumer, nonNull, SLOW } from "./__fixtures__/baseline-repo.ts";
 import { spies } from "./__fixtures__/lint-scripts-kit.ts";
+import { BASELINE_PATH } from "./lint-baseline.constants.ts";
 import { lintMain } from "./lint-main.ts";
 
 const saved = process.cwd();
@@ -42,10 +43,24 @@ function interacting() {
 
 it("lint --fix reruns oxlint over the files git lists until a pass rewrites none", { timeout: SLOW }, async () => {
   const { read, root } = interacting();
-  spies();
+  const { stdout, stderr } = spies();
   process.chdir(root);
   expect(await lintMain(["--fix", "--max-warnings", "0", "src/a.ts"])).toBe(0);
   expect(read()).toBe(BOTH_FIXED);
+  expect([...stdout(), ...stderr()]).toStrictEqual(["repo lint: no hits\n"]);
+});
+
+it("lint --all --fix prints the last pass as oxlint does, every hit it left", { timeout: SLOW }, async () => {
+  const root = consumer({
+    [BASELINE_PATH]: '{ "src/a.ts": { "typescript(no-non-null-assertion)": 1 } }\n',
+    "src/a.ts": nonNull(1),
+  });
+
+  const { stdout } = spies();
+  process.chdir(root);
+  // oxlint's last pass writes through this process, so its text reaches the spy.
+  expect(await lintMain(["--all", "--fix", "src/a.ts"])).toBe(1);
+  expect(stdout().join("")).toContain("no-non-null-assertion");
 });
 
 it("lint --fix runs a single pass where git lists no files", { timeout: SLOW }, async () => {
