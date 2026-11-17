@@ -39,15 +39,19 @@ function ancestorsOf(node: TSESTree.Node): TSESTree.Node[] {
   return ancestors;
 }
 
-/** Whether `node` is a bare use of a visible alias outside every alias, which the alias reports for. */
+/**
+ * Whether `node` is a bare use of a visible alias that the alias already reports for: anywhere except as the whole
+ * body of a type alias, which names a new unsafe type.
+ */
 function isPlainAliasUse(node: DictionaryCandidate, environment: TypeEnvironment): boolean {
   if (node.type !== AST_NODE_TYPES.TSTypeReference || (node.typeArguments ?? undefined) !== undefined) return false;
   const name = referenceName(node);
+  const declaration = ancestorsOf(node).find((ancestor) => ancestor.type === AST_NODE_TYPES.TSTypeAliasDeclaration);
 
   return (
     name !== null &&
     visibleTypeAlias(name, node, environment.typeAliases) !== null &&
-    !ancestorsOf(node).some((ancestor) => ancestor.type === AST_NODE_TYPES.TSTypeAliasDeclaration)
+    (declaration === undefined || declaration.typeAnnotation !== node)
   );
 }
 
@@ -73,7 +77,8 @@ function isInUnsafeDictionary(node: DictionaryCandidate, environment: TypeEnviro
  * Fails a `Record`, index signature or mapped type whose value type is `unknown`, `any`, `object`, `{}` (or a type
  * with only optional `never` members), or a union, intersection, wrapper or visible local alias holding one: such a
  * dictionary hands every caller an unchecked value. `Map`, a shadowed built-in, a type parameter constraint and a
- * nested value such as `{ payload: unknown }` pass; an unsafe alias reports once, at its declaration.
+ * nested value such as `{ payload: unknown }` pass; an unsafe alias reports once, at its declaration, and a bare use
+ * of it passes wherever it sits, in a type alias too, unless it is that alias's whole body (`type B = Unsafe`).
  */
 export const noUnsafeDictionaryType: RepoRule<"unsafeDictionary"> = {
   create(context) {

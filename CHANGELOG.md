@@ -23,6 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - repo/duplicate-code no longer counts import and re-export lines, so a clone made only of a shared import list is no hit.
 - precommit and turn fix a staged file only for the rules it is over its baseline on, so its baselined hits stay as they are; a rule it is over on still gets all its hits in that file fixed
+- repo/no-unsafe-dictionary-type no longer reports a visible unsafe alias again where another type alias uses it, so an interface and the type alias it becomes count the same.
 
 ## [0.2.7] - 2026-11-16
 

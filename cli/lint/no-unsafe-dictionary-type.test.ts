@@ -108,6 +108,13 @@ const FAILS: [string, Value[]][] = [
   // a plain use of an unsafe alias reports at the alias, not at each use
   ["type Unsafe = Record<string, unknown>; const x: Unsafe = {}; const y: Unsafe = {};", ["unknown"]],
   ["type Unsafe = Record<string, unknown>; type AlsoUnsafe = Unsafe; const x: Unsafe = {};", ["unknown", "unknown"]],
+  // a bare use nested in another type alias reports once, like a use in an interface or a function
+  ["type Unsafe = Record<string, unknown>; type B = { x: Unsafe };", ["unknown"]],
+  ["type Unsafe = Record<string, unknown>; interface B { x: Unsafe }", ["unknown"]],
+  ["type Unsafe = Record<string, unknown>; type B = Unsafe | string;", ["unknown"]],
+  ["type Unsafe = Record<string, unknown>; type Index<T, U = Unsafe> = Record<string, U>;", ["unknown"]],
+  // a wrapper that is the whole body names a new unsafe type
+  ["type Unsafe = Record<string, unknown>; type B = Readonly<Unsafe>;", ["unknown", "unknown"]],
   ["type Index<T = unknown> = Record<string, T>; type A = Index;", ["unknown"]],
   ["type Index<T, U = T> = Record<string, U>; type A = Index<string, unknown>;", ["unknown"]],
   ["type Index<T, U = T> = Record<string, U>; type A = Index<unknown>;", ["unknown"]],
