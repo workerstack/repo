@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-17
+
 ### Added
 
 - `repo/no-undefined-var` fails a `var(--x)` or `utility-(--x)` in a string or template that no sheet in the Tailwind entry's `@import` graph declares, that the file does not set itself and that `lint.tailwind.vars` does not list. The generated `.oxlintrc.jsonc` runs it whenever there is a Tailwind entry sheet.
