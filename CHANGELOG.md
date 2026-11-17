@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `bun repo check` counts a tsconfig that a script builds with `tsc -b` or `tsc --build` as run, as it does one named by `-p`, so a solution `tsconfig.build.json` and the configs it references are no longer reported as run by no gate.
+
 ## [0.3.1] - 2026-11-17
 
 ### Fixed

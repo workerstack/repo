@@ -24,7 +24,7 @@ export const WEAK = (rel: string, flags: string) =>
 export const INCLUDES = (rel: string, file: string) =>
   `tsconfig: ${rel} includes ${file}; add "**/*.reject.ts" and "**/*.reject.tsx" to its exclude`;
 export const UNRUN = (rel: string) =>
-  `tsconfig: ${rel} is run by no gate; delete it, or run it from a package.json script with tsc -p ${rel}`;
+  `tsconfig: ${rel} is run by no gate; delete it, or run it from a package.json script with tsc -p ${rel} or tsc -b ${rel}`;
 export const STRICT_FLAGS = [
   "isolatedDeclarations",
   "erasableSyntaxOnly",

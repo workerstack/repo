@@ -17,6 +17,14 @@ const PACKAGE_FILE = "package.json";
 
 /** `-p x`, `--project x` and `--project=x` in a script; the value is the first capture. */
 const PROJECT_FLAG = /(?:^|\s)(?:-p|--project)(?:=|\s+)(\S+)/g;
+
+/** The shell operators that end one command of a script. */
+const SHELL_OPERATOR = /&&|\|\||;|\|/;
+
+/** `tsc` directly followed by `-b` or `--build`; splitting on it leaves what the build reads after it. */
+const TSC_BUILD = /(?:^|\s)tsc\s+(?:-b|--build)(?=\s|$)/;
+
+const WHITESPACE = /\s+/;
 const REJECT_FILE = /\.reject\.tsx?$/;
 
 /** The configs that type-check a package's code, which a reject file must stay out of. */
@@ -170,14 +178,28 @@ function readRaw(cwd: string, rel: string): z.output<ReturnType<typeof rawConfig
   return errors.length === 0 ? rawConfigSchema().parse(config) : {};
 }
 
-/** Every config the scripts of `dir`'s package.json run with `-p` or `--project`, relative to `cwd`. */
+/** The non-flag words after a `tsc -b` or `tsc --build` in `command`, each a project, up to a shell operator. */
+function buildProjects(command: string): string[] {
+  return command.split(SHELL_OPERATOR).flatMap((segment) => {
+    const [, ...builds] = segment.split(TSC_BUILD);
+
+    return builds.flatMap((rest) => rest.split(WHITESPACE).filter((word) => word !== "" && !word.startsWith("-")));
+  });
+}
+
+/**
+ * Every config the scripts of `dir`'s package.json run, relative to `cwd`: a `-p` or `--project` value, and each
+ * project word of a `tsc -b` or `tsc --build`, up to the next shell operator.
+ */
 function scriptTargets(cwd: string, dir: string): string[] {
   const scripts = readRaw(cwd, path.posix.join(dir, PACKAGE_FILE)).scripts;
   const commands = isRecord(scripts) ? Object.values(scripts) : [];
 
-  const flags = commands.filter(isString).flatMap((command) => [...command.matchAll(PROJECT_FLAG)]);
+  const strings = commands.filter(isString);
+  const flags = strings.flatMap((command) => [...command.matchAll(PROJECT_FLAG)]).flatMap((flag) => flag.slice(1));
+  const specs = [...flags, ...strings.flatMap(buildProjects)];
 
-  return flags.flatMap((flag) => flag.slice(1).map((spec) => projectFile(dir, spec)));
+  return specs.map((spec) => projectFile(dir, spec));
 }
 
 /** The folders from `rel`'s own up to `cwd` that hold a package.json. */
@@ -225,7 +247,10 @@ function runConfigs(cwd: string, rels: readonly string[]): Set<string> {
 function unrunProblem(rel: string, run: ReadonlySet<string>): string[] {
   if (run.has(rel)) return [];
 
-  return [`tsconfig: ${rel} is run by no gate; delete it, or run it from a package.json script with tsc -p ${rel}`];
+  return [
+    `tsconfig: ${rel} is run by no gate; delete it, ` +
+      `or run it from a package.json script with tsc -p ${rel} or tsc -b ${rel}`,
+  ];
 }
 
 /**
@@ -233,8 +258,8 @@ function unrunProblem(rel: string, run: ReadonlySet<string>): string[] {
  * cannot be read), per `tsconfig.json` with no `tsconfig.src.json` beside it, and per `tsconfig.src.json` that
  * resolves with a strict flag off, and per reject file a `tsconfig.json` or `tsconfig.src.json` includes. A
  * solution-style `{"files": [], "references": [...]}` checks no code and passes. A tsconfig no gate runs gets a line
- * too: run means named `tsconfig.json` or `tsconfig.src.json`, named by `-p` or `--project` in a script of a
- * package.json above it, or extended or referenced, transitively, by a run config.
+ * too: run means named `tsconfig.json` or `tsconfig.src.json`, named by `-p` or `--project`, or built by `tsc -b` or
+ * `tsc --build`, in a script of a package.json above it, or extended or referenced, transitively, by a run config.
  */
 export function checkTsconfigs(cwd: string, pkgRoot: string): Promise<string[]> {
   const reset = canonicalPath(path.join(pkgRoot, "tsconfig", RESET));

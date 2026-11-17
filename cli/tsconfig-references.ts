@@ -8,7 +8,7 @@ import { RUNTIME_CONFIG } from "./tsconfig.constants.ts";
 
 const QUOTES = /^["']|["']$/g;
 
-/** The config a `-p` value or a reference `path` names from `dir`: the file, or a folder's `tsconfig.json`. */
+/** The config a `-p` or `-b` value or a reference `path` names from `dir`: the file, or a folder's `tsconfig.json`. */
 export function projectFile(dir: string, spec: string): string {
   const target = path.posix.join(dir, spec.replaceAll(QUOTES, ""));
 

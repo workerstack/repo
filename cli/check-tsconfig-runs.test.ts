@@ -14,6 +14,15 @@ import { checkTsconfigs } from "./check-tsconfig.ts";
 
 useTsconfigKit();
 
+/** The lines a check reports for a repo whose `tsconfig.old.json` is run by nothing but the package.json `command`. */
+function oldConfigLines(command: string, rel = "tsconfig.old.json"): Promise<string[]> {
+  const dir = consumerRepo();
+  plainConfig(dir, rel);
+  script(dir, "package.json", command);
+
+  return checkTsconfigs(dir, pkgRoot);
+}
+
 describe("checkTsconfigs runs", () => {
   it("refuses a tsconfig no gate runs", async () => {
     const dir = consumerRepo();
@@ -33,10 +42,7 @@ describe("checkTsconfigs runs", () => {
     "tsc --project=tsconfig.old.json",
     "tsc --noEmit --project tsconfig.old.json && echo ok",
   ])("passes a tsconfig a script runs with %s", async (command) => {
-    const dir = consumerRepo();
-    plainConfig(dir, "tsconfig.old.json");
-    script(dir, "package.json", command);
-    expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
+    expect(await oldConfigLines(command)).toStrictEqual([]);
   });
 });
 
@@ -61,6 +67,45 @@ describe("checkTsconfigs script runs", () => {
     script(dir, "package.json", "tsc -p tsconfig.old.json");
     write(dir, "packages/a/package.json", { name: "a" });
     expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([UNRUN("packages/a/tsconfig.old.json")]);
+  });
+});
+
+describe("checkTsconfigs tsc -b runs", () => {
+  it.each([
+    "tsc -b tsconfig.old.json",
+    "tsc --build ./tsconfig.old.json --force",
+    "tsc -b tsconfig.a.json tsconfig.old.json --watch",
+    "tsc -b --verbose tsconfig.old.json",
+    "tsc -b a.json --force tsconfig.old.json && echo ok",
+  ])("passes a tsconfig a script builds with %s", async (command) => {
+    expect(await oldConfigLines(command)).toStrictEqual([]);
+  });
+
+  it("reads tsc -b of a folder as that folder's tsconfig.json", async () => {
+    const dir = consumerRepo();
+    plainConfig(dir, "tools/tsconfig.json");
+    srcConfig(dir, "tools");
+    plainConfig(dir, "tools/tsconfig.old.json");
+    script(dir, "package.json", "tsc -b tools");
+    expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([UNRUN("tools/tsconfig.old.json")]);
+  });
+
+  it("passes a config a tsc -b solution references", async () => {
+    const dir = consumerRepo();
+    write(dir, "tsconfig.build.json", { files: [], references: [{ path: "./tsconfig.api.json" }] });
+    plainConfig(dir, "tsconfig.api.json");
+    script(dir, "package.json", "tsc -b tsconfig.build.json --watch");
+    expect(await checkTsconfigs(dir, pkgRoot)).toStrictEqual([]);
+  });
+});
+
+describe("checkTsconfigs other -b flags", () => {
+  it.each([
+    ["git checkout -b tools", "tools/tsconfig.old.json"],
+    ["tsc --noEmit -b tsconfig.old.json", "tsconfig.old.json"],
+    ["tsc -b tsconfig.a.json; echo tsconfig.old.json", "tsconfig.old.json"],
+  ])("does not read a project from %s", async (command, rel) => {
+    expect(await oldConfigLines(command, rel)).toStrictEqual([UNRUN(rel)]);
   });
 });
 

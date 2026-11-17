@@ -76,7 +76,7 @@ Cheap outline. Not a file dump.
 - `cli/type-surface-scan.ts` — the bare imports, `/// <reference types>` and globals of the emitted declarations, each charged to the package that declares it, and the own files each imports
 - `cli/type-surface-blame.ts` — reads a JSON or JSONC file's fields, and charges a used package declared in no field to the deps one hop up
 - `cli/build-outputs.ts` — maps each output of `tsconfig.build.json` and of the configs it references to its source; none for a missing or unparsable build config
-- `cli/tsconfig-references.ts` — the configs a tsconfig's own `references` name, a folder as its `tsconfig.json`, and a `-p` value or reference path as a config file
+- `cli/tsconfig-references.ts` — the configs a tsconfig's own `references` name, a folder as its `tsconfig.json`, and a `-p` or `-b` value or reference path as a config file
 - `cli/packed-under.ts` — the files under a dir and whether npm packs each, by `files` (globs, dirs, `!` negations) or the default skips
 - `cli/package-locator.ts` — the package that owns a file: the nearest named `package.json`, memoized
 - `cli/__fixtures__/deps-kit.ts`, `cli/__fixtures__/surface-kit.ts` — scratch package trees for the `check-deps` and `type-surface*` tests
