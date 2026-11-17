@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `bun repo lint` gates on `.repo/lint-baseline.json` as `bun repo precommit` does: it prints and fails only on the hits of a file and rule over the baseline, with the line that says by how many, and counts the rest in one line; `--all` prints every hit and fails on one, as `bun repo lint` did before
 - The typescript-best-practices skill says no value or type may depend on object key order, and shows what to do instead.
+- **Breaking:** `lint.tailwind` in the config `loadConfig` and `repoConfig` return has an optional `entryPoint` and a `vars` list, so code that read `entryPoint` as a string checks it first.
 
 ### Fixed
 
