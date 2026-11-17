@@ -32,7 +32,7 @@ const BUILD_FIRST = 'build first or point "types" at the source';
 
 /**
  * The line for an export whose types file is absent: a source target that is gone, a declaration target no
- * tsconfig.build.json maps to a source, or one tsconfig.build.json emits nothing to.
+ * tsconfig.build.json maps to a source, or one that neither it nor a config it references emits anything to.
  */
 export function missingTypes(manifest: string, { cause, key, types }: MissingTypes): string {
   const missing = `${manifest}: the types of "${key}" (${types}) are missing`;
@@ -41,7 +41,7 @@ export function missingTypes(manifest: string, { cause, key, types }: MissingTyp
 
   if (cause === "unmapped") return `${missing} and no tsconfig.build.json maps them to a source; ${BUILD_FIRST}`;
 
-  return `${missing} and no source in tsconfig.build.json emits them; ${BUILD_FIRST}`;
+  return `${missing} and no source in tsconfig.build.json or a config it references emits them; ${BUILD_FIRST}`;
 }
 
 /** The line for a public package whose export types could not be read. */

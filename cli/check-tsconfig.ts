@@ -8,6 +8,8 @@ import { z } from "zod";
 import { isRecord, isString } from "./json.ts";
 import { canonicalPath } from "./scripts/workspace-root.ts";
 import { configOf, type TsConfig, type TsRun, withTsApi } from "./ts-api.ts";
+import { posix } from "./ts-program.ts";
+import { projectFile, referencedConfigs } from "./tsconfig-references.ts";
 import { RESET, RUNTIME_CONFIG, SRC_CONFIG } from "./tsconfig.constants.ts";
 
 const TSCONFIG_NAME = /^tsconfig(\..+)?\.json$/;
@@ -15,7 +17,6 @@ const PACKAGE_FILE = "package.json";
 
 /** `-p x`, `--project x` and `--project=x` in a script; the value is the first capture. */
 const PROJECT_FLAG = /(?:^|\s)(?:-p|--project)(?:=|\s+)(\S+)/g;
-const QUOTES = /^["']|["']$/g;
 const REJECT_FILE = /\.reject\.tsx?$/;
 
 /** The configs that type-check a package's code, which a reject file must stay out of. */
@@ -169,13 +170,6 @@ function readRaw(cwd: string, rel: string): z.output<ReturnType<typeof rawConfig
   return errors.length === 0 ? rawConfigSchema().parse(config) : {};
 }
 
-/** The config a `-p` value or a reference `path` names from `dir`: the file, or a folder's `tsconfig.json`. */
-function projectFile(dir: string, spec: string): string {
-  const target = path.posix.join(dir, spec.replaceAll(QUOTES, ""));
-
-  return target.endsWith(".json") ? target : path.posix.join(target, RUNTIME_CONFIG);
-}
-
 /** Every config the scripts of `dir`'s package.json run with `-p` or `--project`, relative to `cwd`. */
 function scriptTargets(cwd: string, dir: string): string[] {
   const scripts = readRaw(cwd, path.posix.join(dir, PACKAGE_FILE)).scripts;
@@ -204,10 +198,10 @@ function linkedConfigs(cwd: string, rel: string): string[] {
 
   const parents = [raw.extends].flat().flatMap((spec) => (isString(spec) && spec.startsWith(".") ? [spec] : []));
 
-  const refs = Array.isArray(raw.references) ? raw.references : [];
   const extended = parents.map((spec) => path.posix.join(dir, spec.endsWith(".json") ? spec : `${spec}.json`));
 
-  const referenced = refs.flatMap((ref) => (isRecord(ref) && isString(ref.path) ? [projectFile(dir, ref.path)] : []));
+  const root = posix(cwd);
+  const referenced = referencedConfigs(path.posix.join(root, rel)).map((ref) => path.posix.relative(root, ref));
 
   return [...extended, ...referenced];
 }

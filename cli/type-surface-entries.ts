@@ -2,8 +2,9 @@
  * The files a package's exported types start from. Each `exports` key gives a types target: its `types` condition, a
  * `.ts` runtime target, or the declaration beside a script target when one exists; without `exports`, `types`,
  * `typings` or `main` stands for the root key. A `*` key is expanded against the files npm packs under its target's
- * static dir and the outputs tsconfig.build.json would emit, minus the keys a `null` key excludes; each file an
- * extensionless target matches is read by its own extension. A `.d.ts` target the build emits is read from its source.
+ * static dir and the outputs tsconfig.build.json and the configs it references would emit, minus the keys a `null`
+ * key excludes; each file an extensionless target matches is read by its own extension. A `.d.ts` target the build
+ * emits is read from its source.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -29,7 +30,7 @@ import {
 
 /**
  * An export key whose types file, package-relative, is absent: a source target that is gone, a declaration target
- * with no build config to map it, or one tsconfig.build.json emits nothing to.
+ * with no build config to map it, or one neither tsconfig.build.json nor a config it references emits anything to.
  */
 export type MissingTypes = { cause: "source" | "unmapped" | "unbuilt"; key: string; types: string };
 

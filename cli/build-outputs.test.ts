@@ -126,3 +126,96 @@ it.skipIf(process.platform === "win32")(
     expect(await outputsIn(path.join(root, "a\\b"))).toBeUndefined();
   },
 );
+
+/** A solution build config: no files of its own, and `references` as given. */
+function solution(references: readonly unknown[]): string {
+  return JSON.stringify({ files: [], references });
+}
+
+const API = {
+  "src/a.ts": "export const a = 1;\n",
+  "tsconfig.api.json": config({ outDir: "lib", rootDir: "src" }, ["src/a.ts"]),
+};
+
+const WEB = {
+  "web/src/w.ts": "export const w = 1;\n",
+  "web/tsconfig.json": config({ outDir: "dist" }, ["src/w.ts"]),
+};
+
+it("maps the outputs of each config a solution build config references, a folder as its tsconfig.json", async () => {
+  const dir = tree({
+    ...API,
+    ...WEB,
+    "tsconfig.build.json": solution([{ path: "./tsconfig.api.json" }, { path: "./web" }]),
+  });
+
+  expect(await outputsIn(dir)).toStrictEqual({
+    "lib/a.d.ts": "src/a.ts",
+    "lib/a.js": "src/a.ts",
+    "web/dist/src/w.d.ts": "web/src/w.ts",
+    "web/dist/src/w.js": "web/src/w.ts",
+  });
+});
+
+it("maps a config two others reference once, and the root's own outputs beside its references'", async () => {
+  const dir = tree({
+    ...API,
+    ...WEB,
+    "src/r.ts": "export const r = 1;\n",
+    "tsconfig.build.json": JSON.stringify({
+      compilerOptions: { declaration: true, outDir: "out", rootDir: "src" },
+      files: ["src/r.ts"],
+      references: [{ path: "./tsconfig.api.json" }, { path: "./tsconfig.mid.json" }],
+    }),
+    "tsconfig.mid.json": solution([{ path: "./web/tsconfig.json" }, { path: "./tsconfig.api.json" }]),
+  });
+
+  expect(await outputsIn(dir)).toStrictEqual({
+    "lib/a.d.ts": "src/a.ts",
+    "lib/a.js": "src/a.ts",
+    "out/r.d.ts": "src/r.ts",
+    "out/r.js": "src/r.ts",
+    "web/dist/src/w.d.ts": "web/src/w.ts",
+    "web/dist/src/w.js": "web/src/w.ts",
+  });
+});
+
+/** A build config of its own `src/a.ts` into `lib`, over `references`. */
+function buildOf(references: readonly unknown[]): string {
+  return JSON.stringify({
+    compilerOptions: { declaration: true, outDir: "lib", rootDir: "src" },
+    files: ["src/a.ts"],
+    references,
+  });
+}
+
+const OWN = { "lib/a.d.ts": "src/a.ts", "lib/a.js": "src/a.ts" };
+
+it("ends on a reference cycle", async () => {
+  const dir = tree({
+    "src/a.ts": "export const a = 1;\n",
+    "tsconfig.build.json": buildOf([{ path: "./tsconfig.other.json" }]),
+    "tsconfig.other.json": solution([{ path: "./tsconfig.build.json" }]),
+  });
+
+  expect(await outputsIn(dir)).toStrictEqual(OWN);
+});
+
+it("adds nothing for a reference to a missing file, a path that is no string or a bad config", async () => {
+  const dir = tree({
+    "broken.json": "{ nope",
+    "nopath.json": JSON.stringify({ files: ["src/b.ts"], references: [{ path: 1 }] }),
+    "src/a.ts": "export const a = 1;\n",
+    "src/b.ts": "export const b = 1;\n",
+    "tsconfig.build.json": buildOf([
+      { path: "./gone.json" },
+      { path: "./missing" },
+      { path: "./broken.json" },
+      { path: "./nopath.json" },
+      "./x",
+      null,
+    ]),
+  });
+
+  expect(await outputsIn(dir)).toStrictEqual(OWN);
+});

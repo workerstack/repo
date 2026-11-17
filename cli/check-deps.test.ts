@@ -92,7 +92,7 @@ it("says how to fix a missing source target and a declaration target the build e
   expect(checkDeps(rootOnly({ ...BIN }), new Map([[".", surface({}, missing)]]))).toStrictEqual([
     'package.json: the types of "./gone" (src/gone.ts) are missing; restore the file or drop the export',
     'package.json: the types of "./client" (dist/client.d.ts) are missing and no source in tsconfig.build.json ' +
-      'emits them; build first or point "types" at the source',
+      'or a config it references emits them; build first or point "types" at the source',
   ]);
 });
 

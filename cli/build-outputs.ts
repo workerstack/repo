@@ -6,6 +6,7 @@ import type { CompilerOptions } from "typescript/unstable/async";
 import { configOf } from "./ts-api.ts";
 import type { TsRun } from "./ts-api.ts";
 import { posix } from "./ts-program.ts";
+import { referencedConfigs } from "./tsconfig-references.ts";
 import { BUILD_CONFIG, DECLARATION, JSX_PRESERVE, TYPESCRIPT } from "./type-surface.constants.ts";
 
 /**
@@ -56,15 +57,36 @@ function outputOf(stem: string, root: string, out: string | undefined): string {
 }
 
 /**
- * What a package's tsconfig.build.json emits: each output file, script and declaration, with the source it is built
- * from, as TS 7's tsc names them: under `outDir` (declarations under `declarationDir` when set) by the path from
- * `rootDir`, which defaults to the config's dir, and beside the source with no `outDir`, where json is not copied.
- * Undefined when the package has no build config, or one that cannot be read or is not valid JSON.
+ * What a package's tsconfig.build.json emits, and what each config it references emits, however deep (depth first,
+ * each once, as `tsc -b` builds them): each output file, script and declaration, with the source it is built from, as
+ * TS 7's tsc names them: under `outDir` (declarations under `declarationDir` when set) by the path from `rootDir`,
+ * which defaults to the config's own dir, and beside the source with no `outDir`, where json is not copied. Undefined
+ * when the package has no build config, or one that cannot be read or is not valid JSON; a referenced config that is
+ * missing or cannot be read adds nothing.
  */
 export async function buildOutputs(run: TsRun, dir: string): Promise<Map<string, string> | undefined> {
   const file = posix(path.join(dir, BUILD_CONFIG));
 
   if (!fs.existsSync(file)) return undefined;
+  const [root, ...referenced] = await Promise.all(configsFrom(file).map((config) => outputsOf(run, config)));
+
+  if (root === undefined) return undefined;
+
+  return new Map([...root, ...referenced.flatMap((outputs) => [...(outputs ?? [])])]);
+}
+
+/** `file`, then each existing config it references, depth first, each once. */
+function configsFrom(file: string, seen = new Set<string>()): string[] {
+  seen.add(file);
+
+  for (const reference of referencedConfigs(file))
+    if (!seen.has(reference) && fs.existsSync(reference)) configsFrom(reference, seen);
+
+  return [...seen];
+}
+
+/** What the one config `file` emits; undefined when it cannot be read. */
+async function outputsOf(run: TsRun, file: string): Promise<Map<string, string> | undefined> {
   const read = await configOf(run, file);
 
   if (!read.ok) return undefined;

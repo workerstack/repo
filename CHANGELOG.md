@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- `bun repo check` reads the outputs of every config a solution `tsconfig.build.json` references, as `tsc -b` builds them, so an export whose types one of those builds emits is no longer reported as missing.
+
 ## [0.3.0] - 2026-11-17
 
 ### Added

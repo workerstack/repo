@@ -286,7 +286,7 @@ repo check: fixtures: cli/sync/fixtures is a fixture folder; rename it to cli/sy
 
 `bun repo check` judges where each public package declares the packages it hands consumers. A package is judged when its `package.json` says `"private": false` and has a non-empty `dependencies`, at the root and in every workspace package.
 
-The type surface is what the package's exports give a consumer's compiler. Every typed export goes through an in-memory declaration emit, and nothing is written to disk. A `*` pattern expands over what npm packs: the `files` entries, or without `files` every file but tests, `__fixtures__`, `node_modules` and `.git`. A `null` target, or a conditions key whose every target is `null`, excludes what it matches. An export that points at a tsconfig, as the TypeScript presets do, brings the `.d.ts` files its `files` lists. Without `exports`, the package reads `types`, then `typings`, then `main`. A declaration that is not built yet maps back to its source through `tsconfig.build.json`.
+The type surface is what the package's exports give a consumer's compiler. Every typed export goes through an in-memory declaration emit, and nothing is written to disk. A `*` pattern expands over what npm packs: the `files` entries, or without `files` every file but tests, `__fixtures__`, `node_modules` and `.git`. A `null` target, or a conditions key whose every target is `null`, excludes what it matches. An export that points at a tsconfig, as the TypeScript presets do, brings the `.d.ts` files its `files` lists. Without `exports`, the package reads `types`, then `typings`, then `main`. A declaration that is not built yet maps back to its source through `tsconfig.build.json`. When that file is a solution config (`files: []` and `references`), as `tsc -b` builds it, it maps the sources of each config it references too, a folder reference meaning its `tsconfig.json`; a reference that is missing or does not parse adds nothing.
 
 A package counts as used when the surface names it with a bare import or a `/// <reference types>`, or uses a global it declares. A package that no field of the manifest declares, a transitive one, counts for the dep one hop up that brings it in. A package with no `bin` is a library, and every `dependencies` entry of a library fails: bundle it or make it a peer. A package with `bin` keeps the deps only its own code uses, and fails each one its exported types use. A version moves as written, so a workspace `catalog:` still holds. `optionalDependencies` are left alone.
 
@@ -296,7 +296,7 @@ repo check: package.json: zod is in "dependencies" but the types of "." use it (
 repo check: packages/kit/package.json: nanoid is in "dependencies" of a library (no "bin"); bundle it, or move it to "peerDependencies" and "devDependencies"
 repo check: packages/kit/package.json: the types of "./types" (types/index.d.ts) are missing; restore the file or drop the export
 repo check: packages/kit/package.json: the types of "./client" (dist/client.d.ts) are missing and no tsconfig.build.json maps them to a source; build first or point "types" at the source
-repo check: packages/kit/package.json: the types of "./server" (dist/server.d.ts) are missing and no source in tsconfig.build.json emits them; build first or point "types" at the source
+repo check: packages/kit/package.json: the types of "./server" (dist/server.d.ts) are missing and no source in tsconfig.build.json or a config it references emits them; build first or point "types" at the source
 repo check: packages/cli/package.json: could not read the types of its exports (Unexpected token in package.json)
 ```
 
@@ -1578,7 +1578,8 @@ Cheap outline. Not a file dump.
 - `cli/type-surface-entries.ts` — the files the types of `exports` start from: exact keys, `*` patterns, `null` exclusions, tsconfig `files`, the `types`/`typings`/`main` fallback, and the keys whose types are missing
 - `cli/type-surface-scan.ts` — the bare imports, `/// <reference types>` and globals of the emitted declarations, each charged to the package that declares it, and the own files each imports
 - `cli/type-surface-blame.ts` — reads a JSON or JSONC file's fields, and charges a used package declared in no field to the deps one hop up
-- `cli/build-outputs.ts` — maps each `tsconfig.build.json` output to its source; none for a missing or unparsable config
+- `cli/build-outputs.ts` — maps each output of `tsconfig.build.json` and of the configs it references to its source; none for a missing or unparsable build config
+- `cli/tsconfig-references.ts` — the configs a tsconfig's own `references` name, a folder as its `tsconfig.json`, and a `-p` value or reference path as a config file
 - `cli/packed-under.ts` — the files under a dir and whether npm packs each, by `files` (globs, dirs, `!` negations) or the default skips
 - `cli/package-locator.ts` — the package that owns a file: the nearest named `package.json`, memoized
 - `cli/__fixtures__/deps-kit.ts`, `cli/__fixtures__/surface-kit.ts` — scratch package trees for the `check-deps` and `type-surface*` tests
