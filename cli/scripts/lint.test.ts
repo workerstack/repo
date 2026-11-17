@@ -26,19 +26,22 @@ function repo(packs: string, files: Record<string, string> = {}): string {
   });
 }
 
-/**
- * A PATH holding bun and git alone, so a tool that needs node fails while lint still lists the files its baseline
- * gate counts; it lives as long as the file's tests.
- */
+/** A dir holding bun alone; it lives as long as the file's tests. */
 const BUN_ONLY = fs.mkdtempSync(path.join(os.tmpdir(), "workerstack-bun-only-"));
 
 fs.symlinkSync(process.execPath, path.join(BUN_ONLY, "bun"));
 
-// The real git, wherever this host keeps it; its own dir may hold node too, so only git is linked in, under its own
-// file name so Windows still finds `git.exe`.
 const GIT = fs.realpathSync(Bun.which("git") ?? "git");
+const GIT_DIR = path.dirname(GIT);
 
-fs.symlinkSync(GIT, path.join(BUN_ONLY, path.basename(GIT)));
+/**
+ * A PATH holding bun and the host's git, so a tool that needs node fails while lint still lists the files its baseline
+ * gate counts. Git for Windows finds its install from its own path and cannot run from a link, so git's dir joins
+ * whole where it holds no node; elsewhere only git is linked in.
+ */
+const PATH = Bun.which("node", { PATH: GIT_DIR }) === null ? `${BUN_ONLY}${path.delimiter}${GIT_DIR}` : BUN_ONLY;
+
+if (PATH === BUN_ONLY) fs.symlinkSync(GIT, path.join(BUN_ONLY, "git"));
 
 afterAll(() => removeTree(BUN_ONLY));
 
@@ -51,7 +54,7 @@ function standardsRepo(files: Record<string, string>): string {
 }
 
 /** The env of a spawned repo command: bun and git alone on PATH. */
-const env = childEnv({ PATH: BUN_ONLY });
+const env = childEnv({ PATH });
 
 /** Runs `bun repo <args>` in `root` with bun and git alone on PATH; its exit code and its stdout then stderr. */
 function repoCmd(root: string, ...args: string[]) {
@@ -64,7 +67,7 @@ function repoCmd(root: string, ...args: string[]) {
 function useBunOnlyPath(): void {
   const saved = { cwd: process.cwd() };
   beforeEach(() => {
-    vi.stubEnv("PATH", BUN_ONLY);
+    vi.stubEnv("PATH", PATH);
   });
   afterEach(() => process.chdir(saved.cwd));
 }
