@@ -1,12 +1,12 @@
 # Copied-install fixture (`copied.tgz`)
 
-A consumer repo as `repo init` of `@workerstack/repo` at commit `e7d680e` (the base of plan 12) left it, plus content
+A consumer repo as `repo init` of `@workerstack/repo` at commit `1f4b60b7` (the base of plan 12) left it, plus content
 the consumer added. It is stored packed, because a live `.claude/skills` or `AGENTS.md` under the repo is discovered by agent harnesses as the
 repo's own. `cli/sync/migrate.test.ts` extracts it into a temp dir with the `tar` package; nothing here is used at runtime.
 
 ## How it was made
 
-1. `git archive e7d680e | tar -x -C <scratch>/base`, then `bun install` and `bun pm pack --destination <scratch>/pack` there.
+1. `git archive 1f4b60b7 | tar -x -C <scratch>/base`, then `bun install` and `bun pm pack --destination <scratch>/pack` there.
 2. In an empty `git init` dir with `package.json` (`name`, `private`, `type: module`) and `HOME`, `XDG_CONFIG_HOME`,
    `XDG_DATA_HOME`, `XDG_CACHE_HOME` pointed at scratch dirs (no real global settings are touched):
    `bun add -d @workerstack/repo@file:<scratch>/pack/workerstack-repo-0.0.0.tgz`, then

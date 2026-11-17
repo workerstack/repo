@@ -20,7 +20,7 @@ import { packRepo, publish, type Registry, retagTarball, startRegistry } from ".
 export const OLD_VERSION = "0.0.0-e2e.0";
 
 /** The last commit whose init copies the agent trees into a consumer; its build is published as OLD_VERSION. */
-export const OLD_COMMIT = "e7d680e";
+export const OLD_COMMIT = "1f4b60b7";
 
 declare module "vitest" {
   export interface ProvidedContext {
