@@ -139,6 +139,8 @@ ${CORRECT_LEAD}
 Last, keep a table in the agent instruction file that pairs each rule with what enforces it.
 `;
 
+const HOT_PATHS = "Skip on hot paths (per-frame render, tokenizers, parsers).";
+
 export const TYPESCRIPT_UPSTREAM: string = `---
 name: typescript-best-practices
 description: TypeScript best practices. Use when reading or editing any .ts or .tsx file.
@@ -153,6 +155,7 @@ Apply the **type-system-discipline** principle skill first.
 | Rule | Summary |
 |------|---------|
 | Boundary validation | Parse where data crosses in. See the **boundary-discipline** principle skill. |
+| Object args | Pass objects, not positional, so argument order is self-documenting. ${HOT_PATHS} |
 
 Examples: \`references/patterns.md\`.
 `;

@@ -326,3 +326,26 @@ openFile({
 ```
 
 Skip on hot paths: per-frame render, tokenizers, parsers, anything in a tight loop where the allocation cost matters.
+
+## Key order
+
+```ts
+// Don't. The query string follows the order the keys were written in.
+const query = Object.entries(params).map(([k, v]) => `${k}=${v}`).join("&");
+
+// Do. Sort, so any key order gives the same string.
+const query = Object.entries(params)
+  .toSorted(([a], [b]) => a.localeCompare(b))
+  .map(([k, v]) => `${k}=${v}`)
+  .join("&");
+```
+
+```ts
+// Don't. `load` gets its context type from `setup`, but sort-keys puts `load` first.
+route({ load: ({ context }) => context.user, setup: () => ({ user }) });
+
+// Do. Each step is its own call, so its type flows in call order, not key order.
+route()
+  .setup(() => ({ user }))
+  .load(({ context }) => context.user);
+```

@@ -1,4 +1,5 @@
 import { splitFrontmatter } from "../cli/scripts/emit-agent-shell-tools.ts";
+import { patternsRulesOf } from "./patterns-rules-of.constants.ts";
 import { bodyRulesOf, descriptionRulesOf } from "./sync-pstack-rules.constants.ts";
 import {
   BRO_SKILL,
@@ -57,7 +58,7 @@ type Target = {
 };
 
 function adaptBody({ skill, rel }: Target, body: string, misses: string[]): string {
-  if (rel === PATTERNS_REL) return adaptPatterns(body);
+  if (rel === PATTERNS_REL) return applyRules(adaptPatterns(body), patternsRulesOf(skill.name), misses);
 
   if (hasAdapter(skill.name)) return ADAPTERS[skill.name](skill, body, misses);
 

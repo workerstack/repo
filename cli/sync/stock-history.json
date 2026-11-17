@@ -418,8 +418,8 @@
     "d513a6163e86a8d9",
     "ef0718eedb2a10ec"
   ],
-  ".agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
-  ".agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
+  ".agents/skills/typescript-best-practices/SKILL.md": ["a297841a2248edca", "e6095f3756f20cc8"],
+  ".agents/skills/typescript-best-practices/references/patterns.md": ["799bf7fcdc0a8be1", "ba62349857722311"],
   ".agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
   ".agents/skills/write-plan-deep/SKILL.md": ["c0a2ea8aba749e84"],
   ".agents/skills/write-plan-fast/SKILL.md": ["794f6bb34acd9933"],
@@ -2351,8 +2351,8 @@
   "agents/skills/su/SKILL.md": ["409ad570b7fe0609", "b5077f853232702d"],
   "agents/skills/teach/SKILL.md": ["a6701726c99971af"],
   "agents/skills/tmp/SKILL.md": ["54f6eb139d94e99a", "e11fac7d3548cf2d", "eef6ab7e9e2df25a"],
-  "agents/skills/typescript-best-practices/SKILL.md": ["e6095f3756f20cc8"],
-  "agents/skills/typescript-best-practices/references/patterns.md": ["ba62349857722311"],
+  "agents/skills/typescript-best-practices/SKILL.md": ["a297841a2248edca", "e6095f3756f20cc8"],
+  "agents/skills/typescript-best-practices/references/patterns.md": ["799bf7fcdc0a8be1", "ba62349857722311"],
   "agents/skills/unslop/SKILL.md": ["5fd4307ab13848e1"],
   "agents/skills/write-plan-deep/SKILL.md": [
     "0b89717b68be4721",

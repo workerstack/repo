@@ -154,6 +154,14 @@ const BODY_RULES = {
     },
     { id: "typescript.boundary-cell", re: / See the \*\*boundary-discipline\*\* principle skill\./, to: "" },
     {
+      id: "typescript.key-order",
+      re: /^\| Object args \|.*\|$/m,
+      to:
+        "$&\n| Key order | No value or type depends on object key order, since `sort-keys` sorts keys. " +
+        "Sort before output, and never infer one key's type from a sibling key's " +
+        "(as TanStack's `createFileRoute` does). |",
+    },
+    {
       id: "typescript.examples",
       re: /Examples: `references\/patterns\.md`\./,
       to: "Examples: `references/patterns.md` next to this skill.",

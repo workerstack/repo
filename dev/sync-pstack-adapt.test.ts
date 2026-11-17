@@ -18,6 +18,53 @@ const PATTERNS_UPSTREAM =
   "The underlying principles are language-agnostic. " +
   "See the **type-system-discipline** and **boundary-discipline** principle skills.\n";
 
+const OBJECT_ARGS_SECTION = [
+  "## Object args",
+  "",
+  "```ts",
+  "// Do. Order-independent, self-documenting.",
+  "openFile({ uri });",
+  "```",
+  "",
+  "Skip on hot paths: per-frame render, tokenizers, parsers, anything in a tight loop where the " +
+    "allocation cost matters.",
+  "",
+].join("\n");
+
+const OBJECT_ARGS_ROW =
+  "| Object args | Pass objects, not positional, so argument order is self-documenting. " +
+  "Skip on hot paths (per-frame render, tokenizers, parsers). |";
+
+const KEY_ORDER_ROW =
+  "| Key order | No value or type depends on object key order, since `sort-keys` sorts keys. " +
+  "Sort before output, and never infer one key's type from a sibling key's (as TanStack's `createFileRoute` does). |";
+
+const KEY_ORDER_PATTERNS = `## Key order
+
+\`\`\`ts
+// Don't. The query string follows the order the keys were written in.
+const query = Object.entries(params).map(([k, v]) => \`\${k}=\${v}\`).join("&");
+
+// Do. Sort, so any key order gives the same string.
+const query = Object.entries(params)
+  .toSorted(([a], [b]) => a.localeCompare(b))
+  .map(([k, v]) => \`\${k}=\${v}\`)
+  .join("&");
+\`\`\`
+
+\`\`\`ts
+// Don't. \`load\` gets its context type from \`setup\`, but sort-keys puts \`load\` first.
+route({ load: ({ context }) => context.user, setup: () => ({ user }) });
+
+// Do. Each step is its own call, so its type flows in call order, not key order.
+route()
+  .setup(() => ({ user }))
+  .load(({ context }) => context.user);
+\`\`\`
+`;
+
+const PATTERNS_WITH_OBJECT_ARGS = `${PATTERNS_UPSTREAM}\n${OBJECT_ARGS_SECTION}\n## Next section\n\nMore.\n`;
+
 const BRO_LEAD =
   "This reply only: restate the last message in plain human language. Not a mode switch or session flag. " +
   "After this reply, revert to output.md.";
@@ -83,6 +130,30 @@ it("adaptFile inlines typescript principles and extra file", () => {
     "# TypeScript patterns\n\nCode examples for each rule in `SKILL.md`. " +
       "The underlying principles are language-agnostic.\n",
   );
+});
+
+it("adaptFile puts the Key order row right after the Object args row in the typescript skill", () => {
+  const out = adaptOk(skill("typescript-best-practices"), "SKILL.md", TYPESCRIPT_UPSTREAM);
+  expect(out.text).toContain(`${OBJECT_ARGS_ROW}\n${KEY_ORDER_ROW}\n`);
+});
+
+it("adaptFile puts the Key order section after Object args in the typescript patterns", () => {
+  const out = adaptOk(skill("typescript-best-practices"), "references/patterns.md", PATTERNS_WITH_OBJECT_ARGS);
+  expect(out.text).toContain(`${OBJECT_ARGS_SECTION}\n${KEY_ORDER_PATTERNS}\n## Next section`);
+  expect(out.misses).toStrictEqual([]);
+});
+
+it("adaptFile records a miss when the typescript Object args row is gone", () => {
+  const gone = TYPESCRIPT_UPSTREAM.replace(`${OBJECT_ARGS_ROW}\n`, "");
+  const out = adaptOk(skill("typescript-best-practices"), "SKILL.md", gone);
+  expect(out.misses).toContain("typescript.key-order");
+  expect(out.text).not.toContain("| Key order |");
+});
+
+it("adaptFile records a miss when the typescript Object args section is gone", () => {
+  const out = adaptOk(skill("typescript-best-practices"), "references/patterns.md", PATTERNS_UPSTREAM);
+  expect(out.misses).toContain("typescript.key-order-patterns");
+  expect(out.text).not.toContain("## Key order");
 });
 
 it("adaptFile records a miss when a rewrite target is gone", () => {
